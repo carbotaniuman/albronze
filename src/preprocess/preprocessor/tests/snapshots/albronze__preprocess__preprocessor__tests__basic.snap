@@ -1,0 +1,12 @@
+---
+source: src/preprocess/preprocessor/tests/mod.rs
+expression: pretty_print(basic)
+---
+/*
+Copywrite: idk man can you copywrite hello world
+*/
+// This is definitely hello world, yessir
+int main() {
+    return 0;
+}
+

@@ -1,0 +1,6 @@
+---
+source: src/preprocess/preprocessor/tests/mod.rs
+expression: pretty_print(defect_268_2)
+---
+b
+

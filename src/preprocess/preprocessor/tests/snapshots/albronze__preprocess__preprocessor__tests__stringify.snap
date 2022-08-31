@@ -1,0 +1,8 @@
+---
+source: src/preprocess/preprocessor/tests/mod.rs
+expression: pretty_print(stringify)
+---
+"p = \"foo\\n\""
+"FOO"
+"1 1 1 1 A"
+

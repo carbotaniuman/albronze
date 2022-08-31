@@ -1,0 +1,6 @@
+---
+source: src/preprocess/preprocessor/tests/mod.rs
+expression: pretty_print(guide)
+---
+(0 ,1 ,1 ,1 ,0 ,0 ,0 ,1 )
+

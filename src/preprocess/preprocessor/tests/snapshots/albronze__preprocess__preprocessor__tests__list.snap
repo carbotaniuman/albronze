@@ -1,0 +1,9 @@
+---
+source: src/preprocess/preprocessor/tests/mod.rs
+expression: pretty_print(list)
+---
+1
+(2,(3,))
+0
+1
+

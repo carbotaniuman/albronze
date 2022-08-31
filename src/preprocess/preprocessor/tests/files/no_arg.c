@@ -1,0 +1,6 @@
+#define NO_ARGUMENT()
+#define ONE_ARGUMENT(x) x
+
+NO_ARGUMENT()
+ONE_ARGUMENT(1) 
+ONE_ARGUMENT()

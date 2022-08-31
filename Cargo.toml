@@ -1,0 +1,27 @@
+[package]
+name = "albronze"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+arcstr = "1.1.4"
+codespan = "0.11.1"
+derive_more = "0.99.17"
+hexponent = "0.3.1"
+indexmap = "1.9.1"
+lasso = "0.6.0"
+lazy_static = "1.4.0"
+static_assertions = "1.1.0"
+thin_str = "0.1.0"
+thiserror = "1.0.32"
+
+[dev-dependencies]
+insta = { version = "1.19.0", features = ["yaml"] }
+
+[profile.dev.package.insta]
+opt-level = 3
+
+[profile.dev.package.similar]
+opt-level = 3

@@ -1,0 +1,6 @@
+---
+source: src/preprocess/preprocessor/tests/mod.rs
+expression: pretty_print(recursive_self_ref)
+---
+A(5)
+

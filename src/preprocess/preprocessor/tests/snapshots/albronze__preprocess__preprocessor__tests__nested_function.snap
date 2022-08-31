@@ -1,0 +1,6 @@
+---
+source: src/preprocess/preprocessor/tests/mod.rs
+expression: pretty_print(nested_function)
+---
+5 5 5 5
+

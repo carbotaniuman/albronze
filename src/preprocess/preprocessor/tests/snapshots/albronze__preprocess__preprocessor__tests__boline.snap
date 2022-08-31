@@ -1,0 +1,10 @@
+---
+source: src/preprocess/preprocessor/tests/mod.rs
+expression: pretty_print(boline)
+---
+0x0003
+0xfffd
+0xfffd
+0x0003
+0x0001
+
