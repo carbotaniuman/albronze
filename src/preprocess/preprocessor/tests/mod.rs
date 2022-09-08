@@ -64,6 +64,7 @@ macro_rules! define_test {
 // Behold the ~~power~~ horror of the C preprocessor.
 // https://jadlevesque.github.io/PPMP-Iceberg
 
+define_test! {adjacent_paste}
 define_test! {with_comments basic}
 define_test! {boline}
 define_test! {with_comments comment_and_space}

@@ -4,7 +4,9 @@ mod expand;
 #[cfg(test)]
 mod tests;
 
+use crate::error::{ErrorHandler, Warning};
 use crate::location::{Locatable, Location, SourceKind};
+use crate::preprocess::LexResult;
 use crate::InternedStr;
 
 use super::error::*;
@@ -19,6 +21,7 @@ use indexmap::IndexSet;
 
 use crate::get_str;
 
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -111,6 +114,8 @@ pub struct Preprocessor {
 
     file_manager: FileManager,
     external_mode: bool,
+
+    pub error_handler: RefCell<ErrorHandler<CppError>>,
 }
 
 impl Preprocessor {
@@ -124,6 +129,8 @@ impl Preprocessor {
 
             file_manager,
             external_mode,
+
+            error_handler: RefCell::new(ErrorHandler::new()),
         }
     }
 
@@ -152,9 +159,9 @@ impl Preprocessor {
                 Some(token) => token,
                 None => {
                     if start_of_line == LineType::Start {
-                        // TODO
-                        // let location = lexer.span(lexer.offset());
-                        // lexer.err_loc(LexError::NoNewlineAtEOF, location);
+                        self.error_handler
+                            .get_mut()
+                            .warn(Warning::NoNewlineAtEOF, lexer.span(lexer.offset()));
                     }
 
                     break;
@@ -163,7 +170,7 @@ impl Preprocessor {
 
             let token = match token {
                 Ok(token) => token,
-                Err(_) => todo!(),
+                Err(e) => todo!("{:?}", e),
             };
 
             use TokenKind::*;
@@ -171,11 +178,30 @@ impl Preprocessor {
             match token.data {
                 Hash(_) => {
                     if start_of_line != LineType::DisallowDirective {
-                        let directive = self.expect_directive(lexer).unwrap();
+                        // Delete all previous whitespace on this line
+                        while let Some(TokenKind::Whitespace(t)) =
+                            self.pending_tokens.last().map(|x| x.data)
+                        {
+                            if t != WhitespaceKind::Newline {
+                                self.pending_tokens.pop();
+                            } else {
+                                break;
+                            }
+                        }
+
+                        let directive = match self.expect_directive(lexer) {
+                            Ok(x) => x,
+                            Err(e) => {
+                                self.error_handler.get_mut().push_error(e);
+                                self.skip_to_newline(lexer);
+                                continue;
+                            }
+                        };
 
                         use DirectiveKind::*;
-                        match directive.data {
-                            Define => self.define(lexer).unwrap(),
+                        let res = match directive.data {
+                            Define => self.define(lexer),
+                            Undef => Ok(()),
                             Include => {
                                 lexer.set_include_mode(true);
                                 let header = lexer.next_non_whitespace();
@@ -198,12 +224,22 @@ impl Preprocessor {
                                         unsafe { std::mem::transmute(1) },
                                         data.unwrap().0,
                                     );
+
+                                    Ok(())
                                 } else {
-                                    todo!("bad include {:?}", header)
+                                    Err(directive
+                                        .location
+                                        .with(CppError::InclusionError(IncludeError::BadInclude)))
                                 }
                             }
-                            t => todo!("directive {t:?} not yet done"),
+
+                            t => todo!("directive {t:?} not implemetned"),
                         };
+
+                        if let Err(e) = res {
+                            self.error_handler.get_mut().push_error(e);
+                            self.skip_to_newline(lexer);
+                        }
                     } else {
                         self.pending_tokens.push(token);
                     }
@@ -261,6 +297,7 @@ impl Preprocessor {
                     Err(Locatable::new(CppError::InvalidDirective.into(), location))
                 }
             }
+            // TODO: better handle this error
             Err(err) => Err(err),
         }
     }
@@ -271,8 +308,6 @@ impl Preprocessor {
         skip_newline: bool,
         expected: &'static str,
     ) -> Result<Locatable<InternedStr>, Locatable<CppError>> {
-        let location = lexer.span(lexer.offset());
-
         let next = if skip_newline {
             lexer.next_non_whitespace_any()
         } else {
@@ -290,9 +325,48 @@ impl Preprocessor {
             Some(Err(other)) => Err(other.map(|err| err.into())),
             None => Err(Locatable {
                 data: CppError::EndOfFile(expected).into(),
-                location,
+                location: lexer.span(lexer.offset()),
             }),
         }
+    }
+
+    fn skip_to_newline(&mut self, lexer: &mut Lexer) {
+        lexer.skip_line();
+    }
+
+    fn expect_newline(&mut self, lexer: &mut Lexer) -> LexResult<()> {
+        let mut errored = false;
+        while let Some(s) = lexer.next() {
+            if let Ok(Locatable { data, location }) = s {
+                match data {
+                    TokenKind::Whitespace(s) => {
+                        if s == WhitespaceKind::Newline {
+                            return Ok(());
+                        }
+                        continue;
+                    }
+                    t => {
+                        if !errored {
+                            self.error_handler.get_mut().error(
+                                CppError::UnexpectedToken(
+                                    "whitespace or newline",
+                                    TokenKind::Whitespace(WhitespaceKind::Newline),
+                                ),
+                                location,
+                            );
+
+                            errored = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        self.error_handler
+            .get_mut()
+            .warn(Warning::NoNewlineAtEOF, lexer.span(lexer.offset()));
+
+        return Ok(());
     }
 }
 

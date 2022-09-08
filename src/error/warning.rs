@@ -11,6 +11,15 @@ pub enum Warning {
     // #[error("#warning {0}")]
     // User(String),
 
+    #[error("no space after macro identifier")]
+    NoSpaceAfterMacroIdentifier,
+
+    #[error("backslash newline at end of file")]
+    BackslashNewlineAtEOF,
+
+    #[error("no newline at end of file")]
+    NoNewlineAtEOF,
+
     #[error("extraneous semicolon in {0}")]
     ExtraneousSemicolon(&'static str),
 
@@ -28,9 +37,6 @@ pub enum Warning {
 
     #[error("{} does not support #pragma", env!("CARGO_PKG_NAME"))]
     IgnoredPragma,
-
-    #[error("variadic macros are not yet supported")]
-    IgnoredVariadic,
 
     #[error("implicit int is deprecated and may be removed in a future release")]
     ImplicitInt,

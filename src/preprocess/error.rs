@@ -1,8 +1,8 @@
-use crate::data::Radix;
 use crate::InternedStr;
 
 use super::token::{TokenKind, WhitespaceKind};
 
+use arcstr::ArcStr;
 use thiserror::Error;
 
 /// Lex errors are non-exhaustive and may have new variants added at any time
@@ -11,15 +11,6 @@ use thiserror::Error;
 pub enum LexError {
     #[error("unterminated /* comment")]
     UnterminatedComment,
-
-    #[error("backslash newline at end of file")]
-    BackslashNewlineAtEOF,
-
-    #[error("no newline at end of file")]
-    NoNewlineAtEOF,
-
-    #[error("unknown token: '{0}'")]
-    UnknownToken(char),
 
     #[error("missing terminating {} character in {} literal",
         if *(.string) { "\"" } else { "'" },
@@ -32,21 +23,6 @@ pub enum LexError {
 
     #[error("illegal newline while parsing string literal")]
     NewlineInString,
-
-    #[error("{0} character escape out of range")]
-    CharEscapeOutOfRange(Radix),
-
-    #[error("exponent for floating literal has no digits")]
-    ExponentMissingDigits,
-
-    #[error("missing digits to {0} integer constant")]
-    MissingDigits(Radix),
-
-    #[error("invalid digit {digit} in {radix} constant")]
-    InvalidDigit { digit: u32, radix: Radix },
-
-    #[error("multi-byte character literal")]
-    MultiByteCharLiteral,
 
     #[error("illegal newline while parsing char literal")]
     NewlineInChar,
@@ -62,6 +38,9 @@ pub enum IncludeError {
     /// An `#include<>` or `#include""` was present.
     #[error("empty filename")]
     EmptyInclude,
+
+    #[error("invalid include syntax")]
+    BadInclude,
 
     #[error("file '{0}' not found")]
     FileNotFound(String),
@@ -163,12 +142,12 @@ pub enum CppError {
     HashMissingParameter,
 
     /// '##' missing arguments
-    #[error("'##' cannot appear at {} of macro expansion", if *(.0) { "start" } else { "end"})]
-    HashHashMissingParameter(bool),
+    #[error("'##' cannot appear at {} of macro expansion", if *(.start) { "start" } else { "end"})]
+    HashHashMissingParameter { start: bool },
 
     // /// The result of '##' is not a valid token
-    #[error("token pasting formed '{0}{1}', an invalid preprocessing token")]
-    HashHashInvalid(TokenKind, TokenKind),
+    #[error("token pasting formed '{0}', an invalid preprocessing token")]
+    HashHashInvalid(ArcStr),
 }
 
 impl CppError {

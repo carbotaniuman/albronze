@@ -53,6 +53,10 @@ impl<E, W> ErrorHandler<E, W> {
         self.warnings.extend(iter.map(Into::into));
     }
 
+    pub(crate) fn take_warnings(&mut self) -> VecDeque<Locatable<W>> {
+        std::mem::take(&mut self.warnings)
+    }
+
     /// Errors
 
     /// Whether any errors have been seen and not handled

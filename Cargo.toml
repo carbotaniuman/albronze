@@ -11,7 +11,7 @@ codespan = "0.11.1"
 derive_more = "0.99.17"
 hexponent = "0.3.1"
 indexmap = "1.9.1"
-lasso = "0.6.0"
+lasso = { version = "0.6.0", features = ["multi-threaded"] }
 lazy_static = "1.4.0"
 static_assertions = "1.1.0"
 thin_str = "0.1.0"

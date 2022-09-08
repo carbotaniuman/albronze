@@ -1,4 +1,4 @@
-pub mod ast;
+mod types;
 
 use std::fmt;
 
@@ -65,4 +65,20 @@ impl fmt::Display for StorageClass {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", format!("{:?}", self).to_lowercase())
     }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub enum Sign {
+    Signed,
+    Unsigned,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum LiteralValue {
+    // literals
+    Int(i64),
+    UnsignedInt(u64),
+    Float(f64),
+    Str(String),
+    Char(char),
 }

@@ -67,6 +67,8 @@ impl Preprocessor {
                                 continue;
                             }
 
+                            let call_location = token.location;
+
                             match &m.0.kind {
                                 MacroKind::Object { replacement } => {
                                     disabling_contexts.insert(id);
@@ -145,7 +147,8 @@ impl Preprocessor {
                                             expanded_args.push(temp_buffer);
                                         }
 
-                                        let replacement = Self::replacement_for_function(
+                                        let replacement = self.replacement_for_function(
+                                            call_location,
                                             replacement,
                                             params,
                                             *variadic,
@@ -187,6 +190,8 @@ impl Preprocessor {
     }
 
     fn replacement_for_function(
+        &self,
+        call_location: Location,
         replacement: &[ReplacementKind],
         params: &IndexSet<InternedStr>,
         variadic: VariadicType,
@@ -360,7 +365,8 @@ impl Preprocessor {
                                 assert!(!y.is_whitespace());
 
                                 let s = arcstr::ArcStr::from(format!("{x}{y}"));
-                                let lexer = &mut Lexer::new(SourceKind::Generated, s, false, false);
+                                let lexer =
+                                    &mut Lexer::new(SourceKind::Generated, s.clone(), false, false);
 
                                 if let Some(Ok(mut locatable)) = lexer.next() {
                                     if lexer.next().is_none() {
@@ -373,10 +379,15 @@ impl Preprocessor {
                                             &mut Some(CppToken::Token(locatable, false)),
                                         );
                                     } else {
-                                        todo!("bad token concatenation");
+                                        self.error_handler.borrow_mut().error(
+                                            CppError::HashHashInvalid(s.clone()),
+                                            call_location,
+                                        )
                                     }
                                 } else {
-                                    todo!("bad token concatenation");
+                                    self.error_handler
+                                        .borrow_mut()
+                                        .error(CppError::HashHashInvalid(s.clone()), call_location)
                                 }
                             }
                         }
@@ -444,10 +455,10 @@ impl Preprocessor {
 
     // Consumes tokens like this:
     // before:
-    // #define f(a, (b, c), d);
+    // #define f(a, (b, c), d)
     //           ^
     // after:
-    // #define f(a, (b, c), d);
+    // #define f(a, (b, c), d)
     //                        ^
     fn expect_macro_args(
         &self,
@@ -503,7 +514,7 @@ impl Preprocessor {
                         _,
                     )) = temp.last_mut()
                     {
-                        if location.is_directly_before(&token.location) {
+                        if location.is_directly_before(token.location) {
                             location.merge_span(token.location.span);
                         }
                     } else if temp.len() != 0 {

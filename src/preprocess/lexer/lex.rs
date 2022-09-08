@@ -76,7 +76,7 @@ impl Lexer {
     ///
     /// Before: u8s{"blah `invalid tokens``\nhello // blah"}
     /// After:  chars{"hello // blah"}
-    fn skip_line(&mut self) {
+    pub fn skip_line(&mut self) {
         while let Some(c) = self.peek() {
             if c == '\n' {
                 break;

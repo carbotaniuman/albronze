@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Scope<K: Hash + Eq, V>(Vec<HashMap<K, V>>);
 
 impl<K: Hash + Eq, V> Scope<K, V> {

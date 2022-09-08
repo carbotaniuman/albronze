@@ -11,12 +11,7 @@ static_assertions::assert_eq_size!(TokenKind, [u8; 12]);
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TokenKind {
-    // TODO: This should be a seperate interner
-    Literal(LiteralKind, InternedStr),
-    Identifier(InternedStr),
-    HeaderName { global: bool, name: InternedStr },
     Unknown(char),
-
     Whitespace(WhitespaceKind),
 
     Hash(DigraphKind),
@@ -75,11 +70,64 @@ pub enum TokenKind {
 
     // Misc
     Ellipsis, // ...
+
+    // TODO: This should be a seperate interner
+    Literal(LiteralKind, InternedStr),
+    Keyword(Keyword),
+    Identifier(InternedStr),
+    HeaderName { global: bool, name: InternedStr },
 }
 
 impl TokenKind {
+    pub fn same_kind(&self, other: &Self) -> bool {
+        match (self, other) {
+            (TokenKind::Keyword(left), TokenKind::Keyword(right)) => left == right,
+            _ => std::mem::discriminant(self) == std::mem::discriminant(other),
+        }
+    }
+
     pub fn is_whitespace(&self) -> bool {
         matches!(self, TokenKind::Whitespace(_))
+    }
+
+    fn first_symbol_of(&self) -> TokenKind {
+        use TokenKind::*;
+        match *self {
+            Hash(DigraphKind::Digraph) => Mod,
+            HashHash(DigraphKind::Digraph) => Mod,
+            HashHash(DigraphKind::Standard) => Hash(DigraphKind::Standard),
+            LeftBrace(DigraphKind::Digraph) => Less,
+            RightBrace(DigraphKind::Digraph) => Mod,
+            LeftBracket(DigraphKind::Digraph) => Less,
+            RightBracket(DigraphKind::Digraph) => Colon,
+
+            AddEqual => Plus,
+            SubEqual => Minus,
+            MulEqual => Star,
+            DivEqual => Divide,
+            ModEqual => Mod,
+            ShlEqual => Less,
+            ShrEqual => Greater,
+            AndEqual => Ampersand,
+            OrEqual => BitwiseOr,
+            XorEqual => Xor,
+
+            EqualEqual => Equal,
+            NotEqual => LogicalNot,
+            LessEqual => Less,
+            GreaterEqual => Greater,
+
+            LogicalAnd => Ampersand,
+            LogicalOr => BitwiseOr,
+            ShiftLeft => Less,
+            ShiftRight => Greater,
+
+            StructDeref => Minus,
+
+            Ellipsis => Dot,
+
+            t => t,
+        }
     }
 
     pub fn is_digraph(&self) -> bool {
@@ -98,12 +146,11 @@ impl TokenKind {
     fn can_omit_space(&self, next: &TokenKind) -> bool {
         use LiteralKind::*;
         use TokenKind::*;
-        match (self, next) {
+
+        // TODO: this is a mess
+        match (self, next.first_symbol_of()) {
             // short circuit this first
             (Whitespace(_), _) | (_, Whitespace(_)) => true,
-
-            // TODO: can be more precise
-            (x, _) | (_, x) if x.is_digraph() => false,
 
             (Identifier(s), Literal(String(_), _) | Literal(Char(_), _)) => {
                 get_str!(s).parse::<EncodingKind>().is_err()
@@ -117,14 +164,14 @@ impl TokenKind {
             (
                 Equal | Less | Greater | Plus | Minus | Star | Divide | Mod | Xor | Ampersand
                 | BitwiseOr | LogicalNot | ShiftLeft | ShiftRight,
-                Equal,
+                Equal | EqualEqual,
             ) => false,
 
             (Less, Colon | Less | Mod) => false,
             (Greater, Greater) => false,
 
-            (Plus, Plus) => false,
-            (Minus, Minus | Greater) => false,
+            (Plus, Plus | PlusPlus) => false,
+            (Minus, Minus | MinusMinus | Greater) => false,
 
             (Divide, Divide | Star) => false,
             (Mod, Colon | Greater) => false,
@@ -132,9 +179,9 @@ impl TokenKind {
             (BitwiseOr, BitwiseOr) => false,
 
             (Colon, Greater) => false,
-            (Hash(_), Hash(_)) => false,
+            (Hash(_), Hash(_) | Mod) => false,
 
-            (Dot | Ellipsis, Dot | Ellipsis | Literal(Number, _)) => false,
+            (Ellipsis, Dot | Literal(Number, _)) => false,
 
             _ => true,
         }
@@ -152,6 +199,7 @@ impl fmt::Display for TokenKind {
             Literal(String(encoding), s) => write!(f, "{}\"{}\"", encoding, s),
             Literal(Char(encoding), s) => write!(f, "{}\'{}\'", encoding, s),
             Identifier(s) => write!(f, "{}", s),
+            Keyword(s) => write!(f, "{}", s),
             HeaderName {
                 global: true,
                 name: s,
@@ -361,7 +409,7 @@ pub fn pretty_print<T: IntoIterator<Item = Locatable<TokenKind>> + Clone>(
                 // Check if the two tokens don't need a space or if,
                 // the two tokens were next together in the source code.
                 if !(last.can_omit_space(&token.data)
-                    || last_location.is_directly_before(&token.location))
+                    || last_location.is_directly_before(token.location))
                 {
                     write!(f, " ")?;
                 }
@@ -377,4 +425,160 @@ pub fn pretty_print<T: IntoIterator<Item = Locatable<TokenKind>> + Clone>(
     }
 
     PrettyPrint(collection)
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum Keyword {
+    // statements
+    If,
+    Else,
+    Do,
+    While,
+    For,
+    Switch,
+    Case,
+    Default,
+    Break,
+    Continue,
+    Return,
+    Goto,
+
+    // types
+    Char,
+    Short,
+    Int,
+    Long,
+    Float,
+    Double,
+    Void,
+    Signed,
+    Unsigned,
+    Typedef,
+
+    // user-defined types
+    Union,
+    Struct,
+    Enum,
+    // the `i` in `typedef int i;`
+    UserTypedef(InternedStr),
+
+    // weird types
+    Bool,
+    Complex,
+    Imaginary,
+    VaList,
+
+    // qualifiers
+    Const,
+    Volatile,
+    Restrict,
+    // weird qualifiers
+    Atomic,
+    ThreadLocal,
+    // function qualifiers
+    Inline,
+    NoReturn,
+
+    // storage classes
+    Auto,
+    Register,
+    Static,
+    Extern,
+
+    // intrinsics
+    Sizeof,
+    Generic,
+    StaticAssert,
+    Alignas,
+    Alignof,
+}
+
+impl fmt::Display for Keyword {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // TODO: make this more efficient
+        match self {
+            Keyword::Alignas
+            | Keyword::Alignof
+            | Keyword::Bool
+            | Keyword::Complex
+            | Keyword::Imaginary
+            | Keyword::Atomic
+            | Keyword::Generic => write!(f, "_{:?}", self),
+            Keyword::NoReturn => write!(f, "_Noreturn"),
+            Keyword::ThreadLocal => write!(f, "_Thread_local"),
+            Keyword::StaticAssert => write!(f, "_Static_assert"),
+            Keyword::VaList => write!(f, "va_list"),
+            _ => write!(f, "{}", &format!("{:?}", self).to_lowercase()),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Error, PartialEq, Eq)]
+#[error("invalid keyword")]
+pub struct InvalidKeyword;
+
+impl FromStr for Keyword {
+    type Err = InvalidKeyword;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Ok(match value {
+            "if" => Keyword::If,
+            "else" => Keyword::Else,
+            "do" => Keyword::Do,
+            "while" => Keyword::While,
+            "for" => Keyword::For,
+            "switch" => Keyword::Switch,
+            "case" => Keyword::Case,
+            "default" => Keyword::Default,
+            "break" => Keyword::Break,
+            "continue" => Keyword::Continue,
+            "return" => Keyword::Return,
+            "goto" => Keyword::Goto,
+
+            // types
+            "__builtin_va_list" => Keyword::VaList,
+            "_Bool" => Keyword::Bool,
+            "char" => Keyword::Char,
+            "short" => Keyword::Short,
+            "int" => Keyword::Int,
+            "long" => Keyword::Long,
+            "float" => Keyword::Float,
+            "double" => Keyword::Double,
+            "_Complex" => Keyword::Complex,
+            "_Imaginary" => Keyword::Imaginary,
+            "void" => Keyword::Void,
+            "signed" => Keyword::Signed,
+            "unsigned" => Keyword::Unsigned,
+            "typedef" => Keyword::Typedef,
+            "enum" => Keyword::Enum,
+            "union" => Keyword::Union,
+            "struct" => Keyword::Struct,
+
+            // qualifiers
+            "const" => Keyword::Const,
+            "volatile" => Keyword::Volatile,
+            "restrict" => Keyword::Restrict,
+            "_Atomic" => Keyword::Atomic,
+            "_Thread_local" => Keyword::ThreadLocal,
+
+            // function qualifiers
+            "inline" => Keyword::Inline,
+            "_Noreturn" => Keyword::NoReturn,
+
+            // storage classes
+            "auto" => Keyword::Auto,
+            "register" => Keyword::Register,
+            "static" => Keyword::Static,
+            "extern" => Keyword::Extern,
+
+            // compiler intrinsics
+            "sizeof" => Keyword::Sizeof,
+            "_Alignof" => Keyword::Alignof,
+            "_Alignas" => Keyword::Alignas,
+            "_Generic" => Keyword::Generic,
+            "_Static_assert" => Keyword::StaticAssert,
+
+            _ => return Err(InvalidKeyword),
+        })
+    }
 }

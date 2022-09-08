@@ -1,7 +1,6 @@
 use std::fmt;
-use std::sync::RwLock;
 
-use lasso::{Rodeo, Spur};
+use lasso::{Spur, ThreadedRodeo};
 use lazy_static::lazy_static;
 
 /// Return a `&str` corresponding to this identifier.
@@ -19,11 +18,7 @@ use lazy_static::lazy_static;
 #[macro_export]
 macro_rules! get_str {
     ($self: expr) => {{
-        let tmp = $self.0;
-        $crate::intern::STRINGS
-            .read()
-            .expect("failed to lock String cache for reading")
-            .resolve(&tmp)
+        $crate::intern::STRINGS.resolve(&$self.0)
     }};
 }
 
@@ -51,7 +46,7 @@ impl fmt::Display for InternedStr {
 }
 
 lazy_static! {
-    pub static ref STRINGS: RwLock<Rodeo<Spur>> = RwLock::new(Rodeo::default());
+    pub static ref STRINGS: ThreadedRodeo = ThreadedRodeo::default();
     static ref EMPTY_STRING: InternedStr = InternedStr::get_or_intern("");
     static ref SPACE: InternedStr = InternedStr::get_or_intern(" ");
     static ref NEWLINE: InternedStr = InternedStr::get_or_intern("\n");
@@ -81,14 +76,7 @@ impl InternedStr {
     /// This function will panic if another thread panicked while accessing the global string pool.
     ///
     pub fn get_or_intern<T: AsRef<str> + Into<String>>(val: T) -> InternedStr {
-        InternedStr(
-            STRINGS
-                .write()
-                .expect(
-                    "failed to lock String cache for writing, another thread must have panicked",
-                )
-                .get_or_intern(val),
-        )
+        InternedStr(STRINGS.get_or_intern(val))
     }
 }
 

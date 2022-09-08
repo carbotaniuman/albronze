@@ -51,6 +51,12 @@ pub struct Location {
     pub source: SourceKind,
 }
 
+impl Default for Location {
+    fn default() -> Self {
+        Self::generated(Span { start: 0, end: 0 })
+    }
+}
+
 impl Location {
     pub fn generated(span: Span) -> Location {
         Self {
@@ -73,7 +79,7 @@ impl Location {
         self.span.is_empty()
     }
 
-    pub fn is_directly_before(&self, other: &Location) -> bool {
+    pub fn is_directly_before(self, other: Location) -> bool {
         self.source != SourceKind::Generated
             && self.source == other.source
             && self.span.end == other.span.start
@@ -89,9 +95,20 @@ impl Location {
     }
 
     // will only merge spans if the file matches
-    pub fn maybe_merge(&mut self, other: &Location) {
+    #[must_use]
+    pub fn maybe_merge(mut self, other: Location) -> Self {
         if self.source != SourceKind::Generated && self.source == other.source {
             self.merge_span(other.span);
+        }
+        self
+    }
+
+    #[must_use]
+    pub fn maybe_merge_opt(mut self, other: Option<Location>) -> Self {
+        if let Some(other) = other {
+            self.maybe_merge(other)
+        } else {
+            self
         }
     }
 }

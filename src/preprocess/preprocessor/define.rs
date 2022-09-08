@@ -48,16 +48,17 @@ impl Preprocessor {
                     }
 
                     LeftParen => {
-                        params = Some(self.expect_macro_params(lexer, start_offset).unwrap());
+                        params = Some(self.expect_macro_params(lexer, start_offset)?);
                         start = lexer.next_non_whitespace();
                     }
 
-                    _ => todo!("no space after macro identifier"),
+                    _ => self
+                        .error_handler
+                        .get_mut()
+                        .warn(Warning::NoSpaceAfterMacroIdentifier, macro_id.location),
                 }
             }
-            Some(Err(a)) => {
-                todo!()
-            }
+            Some(Err(e)) => return Err(e.map(|x| x.into())),
             None => {
                 return self.define_macro(
                     macro_id,
@@ -134,8 +135,6 @@ impl Preprocessor {
                 None => {
                     return Err(Locatable::new(
                         CppError::EndOfFile("identifier or ')'"),
-                        // TODO: I think this will be wrong if the file
-                        // the macro started in was not the same as the one it ended in
                         lexer.span(start),
                     ));
                 }
@@ -158,10 +157,10 @@ impl Preprocessor {
                 }
                 Some(Ok(Locatable {
                     data: TokenKind::Identifier(id),
-                    ..
+                    location,
                 })) => {
                     if !arguments.insert(id) {
-                        todo!("duplicate macro parameter")
+                        return Err(location.with(CppError::DuplicateParameter(id.to_string())));
                     }
                 }
                 Some(Ok(Locatable {
@@ -187,16 +186,17 @@ impl Preprocessor {
                     use TokenKind::*;
 
                     match other.data {
-                        Comma => {
-                            if vararg != VariadicType::None {
-                                todo!("vararg with comma after");
-                            }
+                        Comma if vararg == VariadicType::None => {
                             continue;
                         }
                         RightParen => return Ok((arguments, vararg)),
-                        _ => {
+                        t => {
                             return Err(Locatable::new(
-                                CppError::EndOfFile("identifier or ')'"),
+                                if vararg == VariadicType::None {
+                                    CppError::UnexpectedToken("identifier or ')'", t)
+                                } else {
+                                    CppError::UnexpectedToken("')' after '...'", t)
+                                },
                                 lexer.span(start),
                             ))
                         }
@@ -222,21 +222,28 @@ impl Preprocessor {
         let mut cur = first;
         loop {
             match cur {
-                Some(Ok(cur @ Locatable { data, .. })) => {
+                Some(Ok(cur @ Locatable { data, location })) => {
                     use TokenKind::*;
                     use WhitespaceKind::*;
 
                     match data {
                         HashHash(_) => {
+                            let hashhash_location = location;
+
                             let next = match lexer.next_non_whitespace() {
                                 Some(Ok(next @ Locatable { data, .. })) => match data {
                                     HashHash(_) | Whitespace(Newline) => {
-                                        todo!("## at EOL")
+                                        return Err(hashhash_location.with(
+                                            CppError::HashHashMissingParameter { start: false },
+                                        ))
                                     }
                                     _ => next,
                                 },
                                 Some(Err(err)) => todo!(),
-                                None => todo!("## at EOL"),
+                                None => {
+                                    return Err(hashhash_location
+                                        .with(CppError::HashHashMissingParameter { start: false }))
+                                }
                             };
 
                             tokens.push(cur);
@@ -258,7 +265,7 @@ impl Preprocessor {
                                 data: Whitespace(_),
                             }) = tokens.last_mut()
                             {
-                                if location.is_directly_before(&cur.location) {
+                                if location.is_directly_before(cur.location) {
                                     location.merge_span(cur.location.span);
                                 }
                             } else if tokens.len() != 0 {
@@ -301,20 +308,25 @@ impl Preprocessor {
         let mut cur = first;
         loop {
             match cur {
-                Some(Ok(cur @ Locatable { data, .. })) => {
+                Some(Ok(cur @ Locatable { data, location })) => {
                     use TokenKind::*;
                     use WhitespaceKind::*;
 
                     match data {
                         HashHash(_) => {
+                            let hashhash_location = location;
+
                             let next = match lexer.next_non_whitespace() {
-                                Some(Ok(next @ Locatable { data, .. })) => match data {
+                                Some(Ok(next @ Locatable { data, location })) => match data {
                                     HashHash(_) | Whitespace(Newline) => {
-                                        todo!("## at EOL")
+                                        return Err(hashhash_location.with(
+                                            CppError::HashHashMissingParameter { start: false },
+                                        ))
                                     }
                                     Hash(_) => {
-                                        use TokenKind::*;
+                                        let hash_location = location;
 
+                                        use TokenKind::*;
                                         match lexer.next_non_whitespace() {
                                             Some(Ok(Locatable { data, location })) => match data {
                                                 Identifier(id) => {
@@ -326,19 +338,29 @@ impl Preprocessor {
                                                         BaseReplacement::StringifyVarargs(location)
                                                             .into()
                                                     } else {
-                                                        todo!("# with non macro param {data:?}")
+                                                        return Err(hash_location
+                                                            .with(CppError::HashMissingParameter));
                                                     }
                                                 }
-                                                _ => todo!("nothing after #"),
+                                                _ => {
+                                                    return Err(hash_location
+                                                        .with(CppError::HashMissingParameter))
+                                                }
                                             },
-                                            Some(Err(err)) => todo!(),
-                                            None => todo!("nothing after #"),
+                                            Some(Err(err)) => return Err(err.map(|x| x.into())),
+                                            None => {
+                                                return Err(hash_location
+                                                    .with(CppError::HashMissingParameter))
+                                            }
                                         }
                                     }
                                     _ => BaseReplacement::Token(next),
                                 },
                                 Some(Err(err)) => todo!(),
-                                None => todo!("## at EOL"),
+                                None => {
+                                    return Err(hashhash_location
+                                        .with(CppError::HashHashMissingParameter { start: false }))
+                                }
                             };
 
                             if let Some(t) = tokens.pop() {
@@ -354,12 +376,14 @@ impl Preprocessor {
 
                                 tokens.push(to_push);
                             } else {
-                                todo!("## at start of define")
+                                return Err(hashhash_location
+                                    .with(CppError::HashHashMissingParameter { start: true }));
                             }
                         }
                         Hash(_) => {
-                            use TokenKind::*;
+                            let hash_location = location;
 
+                            use TokenKind::*;
                             match lexer.next_non_whitespace() {
                                 Some(Ok(Locatable { data, location })) => match data {
                                     Identifier(id) => {
@@ -373,13 +397,21 @@ impl Preprocessor {
                                                 BaseReplacement::StringifyVarargs(location).into(),
                                             );
                                         } else {
-                                            todo!("# with non macro param {data:?}")
+                                            return Err(
+                                                hash_location.with(CppError::HashMissingParameter)
+                                            );
                                         }
                                     }
-                                    _ => todo!("nothing after #"),
+                                    _ => {
+                                        return Err(
+                                            hash_location.with(CppError::HashMissingParameter)
+                                        )
+                                    }
                                 },
-                                Some(Err(err)) => todo!(),
-                                None => todo!("nothing after #"),
+                                Some(Err(err)) => return Err(err.map(|x| x.into())),
+                                None => {
+                                    return Err(hash_location.with(CppError::HashMissingParameter))
+                                }
                             }
                         }
                         Whitespace(Newline) => {
@@ -402,7 +434,7 @@ impl Preprocessor {
                                 },
                             ))) = tokens.last_mut()
                             {
-                                if location.is_directly_before(&cur.location) {
+                                if location.is_directly_before(cur.location) {
                                     location.merge_span(cur.location.span);
                                 }
                             } else if tokens.len() != 0 {
@@ -419,7 +451,7 @@ impl Preprocessor {
                         }
                     }
                 }
-                Some(Err(err)) => todo!(),
+                Some(Err(err)) => return Err(err.map(|x| x.into())),
                 None => {
                     break;
                 }

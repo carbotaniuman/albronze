@@ -185,7 +185,7 @@ impl Lexer {
             if c.is_none() {
                 let location = self.span(self.initial.len() as u32);
                 self.error_handler
-                    .error(LexError::BackslashNewlineAtEOF, location);
+                    .warn(Warning::BackslashNewlineAtEOF, location);
             }
         }
 
