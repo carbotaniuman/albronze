@@ -154,9 +154,8 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
                     }
                 }
                 other if !other.is_decl_specifier() => {
-                    // let err = SyntaxError::ExpectedDeclSpecifier(keyword);
-                    // return Err(location.with(err));
-                    todo!()
+                    let err = SyntaxError::ExpectedDeclSpecifier(keyword);
+                    return Err(location.with(err));
                 }
                 _ => Locatable::new(keyword.try_into().unwrap(), location),
             };
@@ -244,13 +243,11 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
                     spec_location = Some(d.location.maybe_merge_opt(spec_location));
                     let mut decl = d.data.parse_declarator();
                     if decl.id.is_none() {
-                        // let err = Locatable::new(
-                        //     SyntaxError::Generic("struct members must have an id".into()),
-                        //     d.location,
-                        // );
-                        // self.error_handler.push_back(err);
-                        // decl.id = Some("<unnamed member>".into());
-                        todo!()
+                        self.error_handler.error(
+                            SyntaxError::Generic("struct members must have an id".into()),
+                            d.location,
+                        );
+                        decl.id = Some("<unnamed member>".into());
                     }
                     decl
                 })
@@ -523,19 +520,17 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
             }
             _ if allow_abstract => None,
             Some(x) => {
-                // let err = Err(Locatable::new(
-                //     SyntaxError::Generic(format!("expected variable name or '(', got '{}'", x)),
-                //     self.next_location(),
-                // ));
-                // self.panic();
-                // return err;
-                todo!()
+                let err = Locatable::new(
+                    SyntaxError::Generic(format!("expected variable name or '(', got '{}'", x)),
+                    self.next_location(),
+                );
+                self.panic();
+                return Err(err);
             }
             None => {
-                // return Err(self.next_location().with(SyntaxError::Generic(
-                //     "expected variable name or '(', got <end-of-of-file>".into(),
-                // )));
-                todo!()
+                return Err(self.next_location().with(SyntaxError::Generic(
+                    "expected variable name or '(', got <end-of-of-file>".into(),
+                )));
             }
         };
         self.postfix_type(decl, allow_abstract)

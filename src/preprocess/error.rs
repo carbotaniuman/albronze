@@ -6,6 +6,8 @@ use arcstr::ArcStr;
 use thiserror::Error;
 
 /// Lex errors are non-exhaustive and may have new variants added at any time
+// carbotaniuman: Lexer errors can generally just be added to error_handler
+// and prepreprocessing will just continue as recovery.
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum LexError {
@@ -20,15 +22,6 @@ pub enum LexError {
     #[error("missing terminating {} character in header name",
         if *(.global) { ">" } else { "\"" })]
     MissingHeaderEnd { global: bool },
-
-    #[error("illegal newline while parsing string literal")]
-    NewlineInString,
-
-    #[error("illegal newline while parsing char literal")]
-    NewlineInChar,
-
-    #[error("empty character constant")]
-    EmptyChar,
 }
 
 /// Inclusion errors are non-exhaustive and may have new variants added at any time

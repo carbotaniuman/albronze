@@ -284,6 +284,7 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
             let value = get_str!(literal_val);
             let parsed = match literal_kind {
                 LiteralKind::Number => {
+                    println!("Parsing {}", value);
                     let integral = if let Some(num) = value
                         .strip_prefix("0x")
                         .or_else(|| value.strip_prefix("0X"))
@@ -294,6 +295,8 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
                         .or_else(|| value.strip_prefix("0B"))
                     {
                         i64::from_str_radix(num, 2)
+                    } else if value == "0" {
+                        Ok(0)
                     } else if let Some(num) = value.strip_prefix("0") {
                         i64::from_str_radix(num, 8)
                     } else {
@@ -302,28 +305,34 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
 
                     integral.map(LiteralValue::Int)
                 }
-                LiteralKind::String(_) => {
+                LiteralKind::String(_) | LiteralKind::Char(_) => {
                     let mut ret = String::with_capacity(value.len());
 
-                    // let chars = value.chars();
-                    // let mut last_was_backslash = false;
-                    // loop {
-                    //     if let Some(c) = chars.next() {
-                    //         if last_was_backslash {
-                    //             last_was_backslash = false;
-                    //         } else if c == '\\' {
-                    //             last_was_backslash = true;
-                    //         } else {
-                    //             ret.push(c);
-                    //         }
-                    //     } else {
-                    //         assert!(!last_was_backslash);
-                    //         break;
-                    //     }
-                    // }
-                    todo!()
+                    let mut chars = value.chars();
+                    let mut last_was_backslash = false;
+
+                    // TODO: string concat and encoding
+                    loop {
+                        if let Some(c) = chars.next() {
+                            if last_was_backslash {
+                                last_was_backslash = false;
+                            } else if c == '\\' {
+                                last_was_backslash = true;
+                            } else {
+                                ret.push(c);
+                            }
+                        } else {
+                            assert!(!last_was_backslash);
+                            break;
+                        }
+                    }
+
+                    if matches!(literal_kind, LiteralKind::String(_)) {
+                        Ok(LiteralValue::String(ret))
+                    } else {
+                        Ok(LiteralValue::Char(ret.pop().unwrap_or_else(|| todo!())))
+                    }
                 }
-                _ => todo!("{:?}", literal_kind),
             };
 
             match parsed {

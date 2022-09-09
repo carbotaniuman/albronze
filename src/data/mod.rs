@@ -79,6 +79,6 @@ pub enum LiteralValue {
     Int(i64),
     UnsignedInt(u64),
     Float(f64),
-    Str(String),
+    String(String),
     Char(char),
 }

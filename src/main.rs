@@ -41,27 +41,24 @@ fn main() {
     let value = arcstr::format!(
         "{}",
         r#"
-int main(){
-    int num, rem, reverse_num, temp, start, end;
+int main()
+{
+    char ch;
+    _Bool isVowel = false;
 
-    printf("Enter the lower limit: ");
-    scanf("%d",&start);
+    printf("Enter an alphabet: ");
+    scanf("%c",&ch);
 
-    printf("Enter the upper limit: ");
-    scanf("%d",&end);
+    if(ch=='a'||ch=='A'||ch=='e'||ch=='E'||ch=='i'||ch=='I'
+            ||ch=='o'||ch=='O'||ch=='u'||ch=='U')
+    {
+        isVowel = true;
 
-    printf("Palindrome numbers between %d and %d are: ",start,end);
-    for(num=start;num<=end;num++){
-        temp=num;
-        reverse_num=0;
-        while(temp){
-            rem=temp%10;
-            temp=temp/10;
-            reverse_num=reverse_num*10+rem;
-        }
-        if(num==reverse_num)
-            printf("%d ",num);
     }
+    if (isVowel == true)
+        printf("%c is a Vowel", ch);
+    else
+        printf("%c is a Consonant", ch);
     return 0;
 }
 "#
@@ -108,7 +105,7 @@ int main(){
     }
     println!("{:#?}", out);
     println!("{:?}", parser.warnings());
-    // for i in processor.pending_tokens {
-    //     println!("{:?}", i);
-    // }
+    for i in processor.pending_tokens {
+        println!("{:?}", i);
+    }
 }

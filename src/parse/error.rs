@@ -8,6 +8,10 @@ use thiserror::Error;
 #[derive(Clone, Debug, Error, PartialEq)]
 #[non_exhaustive]
 pub enum SyntaxError {
+    // TODO: replace this
+    #[error("{0}")]
+    Generic(String),
+
     #[error("expected {0}, got <end-of-file>")]
     EndOfFile(&'static str),
 
@@ -23,8 +27,9 @@ pub enum SyntaxError {
                            |t| std::borrow::Cow::Owned(t.to_string())))]
     ExpectedId(Option<TokenKind>),
 
-    // #[error("expected declaration specifier, got keyword '{0}'")]
-    // ExpectedDeclSpecifier(Keyword),
+    #[error("expected declaration specifier, got keyword '{0}'")]
+    ExpectedDeclSpecifier(super::Keyword),
+
     #[error("expected declarator in declaration")]
     ExpectedDeclarator,
 
@@ -40,8 +45,9 @@ pub enum SyntaxError {
     #[error("functions cannot be initialized (got {0})")]
     FunctionInitializer(super::ast::Initializer),
 
-    // #[error("function not allowed in this context (got {})", .0.as_type())]
-    // FunctionNotAllowed(ast::FunctionDefinition),
+    #[error("function not allowed in this context (got {})", .0.as_type())]
+    FunctionNotAllowed(super::ast::FunctionDefinition),
+
     #[error("function definitions must have a name")]
     MissingFunctionName,
 

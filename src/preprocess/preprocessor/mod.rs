@@ -158,19 +158,16 @@ impl Preprocessor {
             let token = match next {
                 Some(token) => token,
                 None => {
-                    if start_of_line == LineType::Start {
-                        self.error_handler
-                            .get_mut()
-                            .warn(Warning::NoNewlineAtEOF, lexer.span(lexer.offset()));
-                    }
-
                     break;
                 }
             };
 
             let token = match token {
                 Ok(token) => token,
-                Err(e) => todo!("{:?}", e),
+                Err(e) => {
+                    self.error_handler.get_mut().push_error(e.map(|x| x.into()));
+                    continue;
+                }
             };
 
             use TokenKind::*;
@@ -361,10 +358,6 @@ impl Preprocessor {
                 }
             }
         }
-
-        self.error_handler
-            .get_mut()
-            .warn(Warning::NoNewlineAtEOF, lexer.span(lexer.offset()));
 
         return Ok(());
     }

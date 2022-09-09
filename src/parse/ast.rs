@@ -46,6 +46,12 @@ pub struct TypeName {
     pub declarator: Declarator,
 }
 
+impl fmt::Display for TypeName {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        todo!()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, From)]
 pub enum DeclarationSpecifier {
     #[from]

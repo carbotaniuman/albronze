@@ -7,7 +7,7 @@ mod stmt;
 use crate::error::{ErrorHandler, Warning};
 use crate::location::{Locatable, Location};
 use crate::parse::error::SyntaxError;
-use crate::preprocess::{Keyword, LexResult, LiteralKind, TokenKind};
+use crate::preprocess::{EncodingKind, Keyword, LexResult, LiteralKind, TokenKind};
 use crate::scope::Scope;
 use crate::InternedStr;
 use ast::ExternalDeclaration;
@@ -96,8 +96,7 @@ impl<I: Iterator<Item = Lexeme>> Iterator for Parser<I> {
         loop {
             // check for pending changes from the last declaration
             if let Some(err) = self.error_handler.pop_error() {
-                // return Some(Err(err));
-                todo!()
+                return Some(Err(err));
             } else if let Some(decl) = self.pending.pop_front() {
                 if self.debug {
                     println!("ast: {:?}", decl.data);
@@ -108,16 +107,15 @@ impl<I: Iterator<Item = Lexeme>> Iterator for Parser<I> {
             // Check for end of file
             if self.peek_token().is_none() {
                 // peek_token can encounter lex errors that it doesn't return
-                // return self.error_handler.pop_front().map(Err);
-                // todo!()
-                return None;
+                return self.error_handler.pop_error().map(Err);
             }
 
             // Remove extra semicolons
             while let Some(locatable) = self.match_next(&TokenKind::Semicolon) {
-                // self.error_handler
-                // .warn("extraneous semicolon at top level", locatable.location);
-                todo!()
+                self.error_handler.warn(
+                    Warning::ExtraneousSemicolon("top level"),
+                    locatable.location,
+                );
             }
 
             // Parse more of our file
@@ -271,6 +269,19 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
             None
         }
     }
+    fn match_string_literal(&mut self) -> Option<Locatable<(EncodingKind, InternedStr)>> {
+        let next = self.next_token();
+        if let Some(Locatable {
+            data: TokenKind::Literal(LiteralKind::String(e), interned),
+            location,
+        }) = next
+        {
+            Some(location.with((e, interned)))
+        } else {
+            self.unput(next);
+            None
+        }
+    }
     fn match_next(&mut self, next: &TokenKind) -> Option<Locatable<TokenKind>> {
         self.match_any(&[next])
     }
@@ -303,39 +314,36 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
         if let Some(id) = self.match_id() {
             Ok(id)
         } else {
-            // let err = Err(Locatable {
-            //     data: SyntaxError::ExpectedId(self.peek_token().cloned()),
-            //     location: self.next_location(),
-            // });
-            // self.panic();
-            // err
-            todo!()
+            let err = Locatable {
+                data: SyntaxError::ExpectedId(self.peek_token().cloned()),
+                location: self.next_location(),
+            };
+            self.panic();
+            Err(err)
         }
     }
     fn expect(&mut self, next: TokenKind) -> SyntaxResult<Locatable<TokenKind>> {
         let token = match self.peek_token() {
             Some(t) => t,
             None => {
-                // let err = Err(Locatable {
-                //     data: SyntaxError::Generic(format!("expected '{}', got '<end-of-file>'", next)),
-                //     // TODO: we don't actually want this, we want the end of the file
-                //     location: self.last_location,
-                // });
-                // self.panic();
-                // return err;
-                todo!()
+                let err = Locatable {
+                    data: SyntaxError::Generic(format!("expected '{}', got '<end-of-file>'", next)),
+                    // TODO: we don't actually want this, we want the end of the file
+                    location: self.last_location,
+                };
+                self.panic();
+                return Err(err);
             }
         };
         if token.same_kind(&next) {
             Ok(self.next_token().unwrap())
         } else {
-            // let err = Err(Locatable {
-            //     data: SyntaxError::Generic(format!("expected '{}', got '{}'", next, token)),
-            //     location: self.next_location(),
-            // });
-            // self.panic();
-            // err
-            todo!()
+            let err = Locatable {
+                data: SyntaxError::Generic(format!("expected '{}', got '{}'", next, token)),
+                location: self.next_location(),
+            };
+            self.panic();
+            Err(err)
         }
     }
     /// - replace `self.current` with `item`

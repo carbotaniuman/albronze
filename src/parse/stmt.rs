@@ -34,11 +34,10 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
             .is_err()
         {
             assert!(self.peek_token().is_none()); // from the 'break' above
-                                                  // let actual_err = self.last_location.with(SyntaxError::Generic(
-                                                  //     "unclosed '{' delimeter at end of file".into(),
-                                                  // ));
-                                                  // pending_errs.push(actual_err);
-            todo!()
+            let actual_err = self.last_location.with(SyntaxError::Generic(
+                "unclosed '{' delimeter at end of file".into(),
+            ));
+            pending_errs.push(actual_err);
         }
         if let Some(err) = pending_errs.pop() {
             self.error_handler.extend_errors(pending_errs.into_iter());
@@ -135,9 +134,8 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
                 | Keyword::Generic => self.expression_statement(),
                 decl if decl.is_decl_specifier() => self.declaration(),
                 other => {
-                    // let err = SyntaxError::NotAStatement(*other);
-                    // Err(self.next_location().with(err))
-                    todo!()
+                    let err = SyntaxError::NotAStatement(*other);
+                    Err(self.next_location().with(err))
                 }
             },
             Some(TokenKind::Semicolon) => {
@@ -356,10 +354,7 @@ impl ExternalDeclaration {
     /// Otherwise, return the declarator for the function definition.
     fn into_declaration(self) -> Result<Declaration, SyntaxError> {
         match self {
-            ExternalDeclaration::Function(def) => {
-                // Err(SyntaxError::FunctionNotAllowed(def))
-                todo!()
-            }
+            ExternalDeclaration::Function(def) => Err(SyntaxError::FunctionNotAllowed(def)),
             ExternalDeclaration::Declaration(decl) => Ok(decl),
         }
     }

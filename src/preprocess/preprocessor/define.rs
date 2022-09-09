@@ -138,11 +138,7 @@ impl Preprocessor {
                         lexer.span(start),
                     ));
                 }
-                Some(Err(err)) => {
-                    // self.error_handler.push_back(err);
-                    todo!();
-                    // continue;
-                }
+                Some(Err(err)) => return Err(err.map(|x| x.into())),
                 Some(Ok(Locatable {
                     data: TokenKind::RightParen,
                     ..
@@ -167,11 +163,10 @@ impl Preprocessor {
                     data: other,
                     location,
                 })) => {
-                    // self.error_handler.error(
-                    //     CppError::UnexpectedToken("identifier or ')'", other),
-                    //     location,
-                    // )
-                    todo!()
+                    return Err(Locatable::new(
+                        CppError::UnexpectedToken("identifier or ')'", other),
+                        location,
+                    ));
                 }
             }
             match lexer.next_non_whitespace() {
@@ -239,7 +234,7 @@ impl Preprocessor {
                                     }
                                     _ => next,
                                 },
-                                Some(Err(err)) => todo!(),
+                                Some(Err(err)) => return Err(err.map(|x| x.into())),
                                 None => {
                                     return Err(hashhash_location
                                         .with(CppError::HashHashMissingParameter { start: false }))
@@ -279,7 +274,7 @@ impl Preprocessor {
                         }
                     }
                 }
-                Some(Err(err)) => todo!(),
+                Some(Err(err)) => return Err(err.map(|x| x.into())),
                 None => {
                     break;
                 }
@@ -356,7 +351,7 @@ impl Preprocessor {
                                     }
                                     _ => BaseReplacement::Token(next),
                                 },
-                                Some(Err(err)) => todo!(),
+                                Some(Err(err)) => return Err(err.map(|x| x.into())),
                                 None => {
                                     return Err(hashhash_location
                                         .with(CppError::HashHashMissingParameter { start: false }))
