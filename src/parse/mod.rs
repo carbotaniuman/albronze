@@ -181,7 +181,7 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
                 //         location,
                 //     ));
                 // }
-                Some(Ok(mut token)) => {
+                Some(Ok(token)) => {
                     self.last_location = token.location;
                     // This is _such_ a hack
                     // I'd much rather use `Token::is_decl_specifier()` at the various places it's necessary,

@@ -1,9 +1,9 @@
 use std::convert::TryFrom;
 
 use super::*;
-use crate::data::LiteralValue;
+use crate::data::{AssignmentToken, ComparisonToken, LiteralValue};
 use crate::get_str;
-use crate::parse::ast::{AssignmentToken, Expr, ExprType, TypeName};
+use crate::parse::ast::{Expr, ExprType, TypeName};
 
 use crate::preprocess::{DigraphKind, Keyword};
 
@@ -55,7 +55,6 @@ impl BinaryPrecedence {
         }
     }
     fn constructor(self) -> impl Fn(Expr, Expr) -> ExprType {
-        use crate::parse::ast::ComparisonToken;
         use BinaryPrecedence::*;
         use ExprType::*;
         let func: Box<dyn Fn(_, _) -> _> = match self {

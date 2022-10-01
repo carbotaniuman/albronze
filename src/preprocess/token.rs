@@ -377,7 +377,7 @@ pub fn pretty_print<T: IntoIterator<Item = Locatable<TokenKind>> + Clone>(
             for token in self.0.clone() {
                 // Code to skip empty lines or lines filled
                 // with only whitespace
-                let is_whitespace = match token.data {
+                match token.data {
                     // If we see a comment here, we're going to emit it
                     // because we checked for that earlier in the
                     // actual preprocessor.
@@ -401,10 +401,8 @@ pub fn pretty_print<T: IntoIterator<Item = Locatable<TokenKind>> + Clone>(
                             write!(f, "{}", i)?;
                         }
                         had_non_whitespace = true;
-
-                        false
                     }
-                };
+                }
 
                 // Check if the two tokens don't need a space or if,
                 // the two tokens were next together in the source code.

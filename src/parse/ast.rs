@@ -1,4 +1,4 @@
-use crate::data::LiteralValue;
+use crate::data::{AssignmentToken, ComparisonToken, LiteralValue};
 use crate::location::Locatable;
 use crate::InternedStr;
 
@@ -282,27 +282,3 @@ impl Default for StmtType {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum AssignmentToken {
-    Equal,
-    AddEqual,
-    SubEqual,
-    MulEqual,
-    DivEqual,
-    ModEqual,
-    ShlEqual, // <<=
-    ShrEqual, // >>=
-    AndEqual,
-    OrEqual,
-    XorEqual, // ^=
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum ComparisonToken {
-    Less,
-    Greater,
-    EqualEqual,
-    NotEqual,
-    LessEqual,
-    GreaterEqual,
-}

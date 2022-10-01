@@ -246,8 +246,8 @@ impl Preprocessor {
                         }
                         Whitespace(Newline) => {
                             if let Some(Locatable {
-                                location,
                                 data: Whitespace(_),
+                                ..
                             }) = tokens.last_mut()
                             {
                                 tokens.pop();
@@ -412,8 +412,8 @@ impl Preprocessor {
                         Whitespace(Newline) => {
                             if let Some(ReplacementKind::Base(BaseReplacement::Token(
                                 Locatable {
-                                    location,
                                     data: Whitespace(_),
+                                    ..
                                 },
                             ))) = tokens.last_mut()
                             {

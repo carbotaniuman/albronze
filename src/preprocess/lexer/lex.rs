@@ -333,9 +333,7 @@ impl Iterator for Lexer {
                 use DigraphKind::*;
                 use TokenKind::*;
 
-                // println!("&& {} {} {}", span_start, self.location().offset, c.len_utf8());
                 // this giant switch is most of the logic
-
                 let start_line = self.line();
                 let data = match c {
                     '#' => match self.peek() {

@@ -213,9 +213,9 @@ impl Preprocessor {
         }
 
         for t in replacement.iter() {
-            let mut handle_base = |base: &BaseReplacement,
-                                   ret: &mut Vec<Option<CppToken>>,
-                                   concat: bool| {
+            let handle_base = |base: &BaseReplacement,
+                               ret: &mut Vec<Option<CppToken>>,
+                               concat: bool| {
                 use BaseReplacement::*;
                 match *base {
                     Token(t) => {
@@ -368,7 +368,7 @@ impl Preprocessor {
                                 let lexer =
                                     &mut Lexer::new(SourceKind::Generated, s.clone(), false, false);
 
-                                if let Some(Ok(mut locatable)) = lexer.next() {
+                                if let Some(Ok(locatable)) = lexer.next() {
                                     if lexer.next().is_none() {
                                         // Really we want a deletion here, but swapping
                                         // in `None` doesn't change the semantics and

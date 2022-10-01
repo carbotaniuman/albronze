@@ -6,7 +6,6 @@ mod tests;
 
 use crate::error::{ErrorHandler, Warning};
 use crate::location::{Locatable, Location, SourceKind};
-use crate::preprocess::LexResult;
 use crate::InternedStr;
 
 use super::error::*;
@@ -198,7 +197,11 @@ impl Preprocessor {
                         use DirectiveKind::*;
                         let res = match directive.data {
                             Define => self.define(lexer),
-                            Undef => Ok(()),
+                            Undef => (|| {
+                                let id = self.expect_id(lexer, false)?;
+                                self.definitions.remove(&id.data);
+                                self.expect_no_tokens(lexer)
+                            })(),
                             Include => {
                                 lexer.set_include_mode(true);
                                 let header = lexer.next_non_whitespace();
@@ -331,29 +334,21 @@ impl Preprocessor {
         lexer.skip_line();
     }
 
-    fn expect_newline(&mut self, lexer: &mut Lexer) -> LexResult<()> {
-        let mut errored = false;
+    fn expect_no_tokens(&mut self, lexer: &mut Lexer) -> Result<(), Locatable<CppError>> {
         while let Some(s) = lexer.next() {
             if let Ok(Locatable { data, location }) = s {
                 match data {
                     TokenKind::Whitespace(s) => {
                         if s == WhitespaceKind::Newline {
-                            return Ok(());
+                            break;
                         }
                         continue;
                     }
-                    t => {
-                        if !errored {
-                            self.error_handler.get_mut().error(
-                                CppError::UnexpectedToken(
-                                    "whitespace or newline",
-                                    TokenKind::Whitespace(WhitespaceKind::Newline),
-                                ),
-                                location,
-                            );
-
-                            errored = true;
-                        }
+                    _ => {
+                        return Err(location.with(CppError::UnexpectedToken(
+                            "whitespace or newline",
+                            TokenKind::Whitespace(WhitespaceKind::Newline),
+                        )));
                     }
                 }
             }

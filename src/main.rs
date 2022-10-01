@@ -3,6 +3,7 @@
 #![allow(unused_mut)]
 #![allow(unused_assignments)]
 
+mod analyze;
 mod data;
 pub mod error;
 mod intern;
@@ -41,26 +42,8 @@ fn main() {
     let value = arcstr::format!(
         "{}",
         r#"
-int main()
-{
-    char ch;
-    _Bool isVowel = false;
-
-    printf("Enter an alphabet: ");
-    scanf("%c",&ch);
-
-    if(ch=='a'||ch=='A'||ch=='e'||ch=='E'||ch=='i'||ch=='I'
-            ||ch=='o'||ch=='O'||ch=='u'||ch=='U')
-    {
-        isVowel = true;
-
-    }
-    if (isVowel == true)
-        printf("%c is a Vowel", ch);
-    else
-        printf("%c is a Consonant", ch);
-    return 0;
-}
+#define A x
+A
 "#
     );
     let mut files = Files::new();
@@ -77,6 +60,10 @@ int main()
         "{}",
         format!("{}", pretty_print(processor.pending_tokens.clone()))
     );
+
+    for i in &processor.pending_tokens {
+        println!("{:?}", i);
+    }
 
     let x = processor.pending_tokens.clone();
     println!("{:?}", processor.error_handler);
@@ -105,7 +92,4 @@ int main()
     }
     println!("{:#?}", out);
     println!("{:?}", parser.warnings());
-    for i in processor.pending_tokens {
-        println!("{:?}", i);
-    }
 }

@@ -104,7 +104,7 @@ impl Location {
     }
 
     #[must_use]
-    pub fn maybe_merge_opt(mut self, other: Option<Location>) -> Self {
+    pub fn maybe_merge_opt(self, other: Option<Location>) -> Self {
         if let Some(other) = other {
             self.maybe_merge(other)
         } else {
