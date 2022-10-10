@@ -24,14 +24,14 @@ pub enum Warning {
     ExtraneousSemicolon(&'static str),
 
     #[error("'{0}' qualifier on return type has no effect")]
-    FunctionQualifiersIgnored(crate::analyze::hir::Qualifiers),
+    FunctionQualifiersIgnored(crate::hir::Qualifiers),
 
     #[error("duplicate '{0}' declaration specifier{}",
             if *.1 > 1 { format!(" occurs {} times", .1) } else { String::new() })]
     DuplicateSpecifier(crate::parse::ast::UnitSpecifier, usize),
 
     #[error("qualifiers in type casts are ignored")]
-    IgnoredQualifier(crate::analyze::hir::Qualifiers),
+    IgnoredQualifier(crate::hir::Qualifiers),
 
     #[error("declaration does not declare anything")]
     EmptyDeclaration,

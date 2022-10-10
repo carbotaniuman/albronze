@@ -1,13 +1,13 @@
 use crate::data::{AssignmentToken, ComparisonToken};
 
 use crate::analyze::error::SemanticError;
-use crate::analyze::hir::{
-    BinaryOp, Declaration, Expr, ExprType, Initializer, Qualifiers, Stmt, StmtType, Symbol,
-    TypeKind, Variable,
-};
 use crate::analyze::PureAnalyzer;
 use crate::data::{LiteralValue, Sign, StorageClass};
 use crate::error::ErrorHandler;
+use crate::hir::{
+    BinaryOp, Declaration, Expr, ExprType, Initializer, Qualifiers, Stmt, StmtType, Symbol,
+    TypeKind, Variable,
+};
 use crate::location::{Locatable, Location};
 use crate::parse::ast;
 use crate::InternedStr;
@@ -960,7 +960,7 @@ impl PureAnalyzer {
 
 // literal
 pub(super) fn literal(literal: LiteralValue, location: Location) -> Expr {
-    use crate::analyze::hir::ArrayType;
+    use crate::hir::ArrayType;
 
     let ctype = match &literal {
         LiteralValue::Char(_) => TypeKind::Char(None),
@@ -1135,7 +1135,7 @@ impl TypeKind {
         }
     }
     fn is_complete(&self) -> bool {
-        use crate::analyze::hir::ArrayType;
+        use crate::hir::ArrayType;
 
         match self {
             TypeKind::Void | TypeKind::Function(_) | TypeKind::Array(_, ArrayType::Unbounded) => {

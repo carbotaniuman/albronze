@@ -1,8 +1,8 @@
 use crate::analyze::error::SemanticError;
-use crate::analyze::hir::{BinaryOp, Expr, ExprType, TypeKind};
 use crate::analyze::Error;
 use crate::arch::*;
 use crate::data::{ComparisonToken, LiteralValue};
+use crate::hir::{BinaryOp, Expr, ExprType, TypeKind};
 use crate::location::{Locatable, Location};
 
 use crate::analyze::CompileResult;

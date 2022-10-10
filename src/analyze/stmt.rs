@@ -1,7 +1,7 @@
 use crate::analyze::error::SemanticError;
-use crate::analyze::hir::{Expr, Stmt, StmtType, TypeKind};
 use crate::analyze::FunctionAnalyzer;
 use crate::data::LiteralValue;
+use crate::hir::{Expr, Stmt, StmtType, TypeKind};
 use crate::location::{Locatable, Location};
 use crate::parse::ast;
 

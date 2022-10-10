@@ -132,9 +132,9 @@ impl std::fmt::Display for LiteralValue {
                 // // it's not needed in debug output.
                 // assert_eq!(escaped.pop(), Some(b'\0'));
 
-                // write!(f, "\"{}\"", String::from_utf8_lossy(&escaped))
+                write!(f, "\"{}\"", s)
 
-                todo!()
+                // todo!()
             }
             Char(c) => write!(f, "'{}'", char::from(*c).escape_default()),
         }

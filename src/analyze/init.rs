@@ -1,7 +1,7 @@
 //! 6.7.9 Initialization
 
 use crate::analyze::error::SemanticError;
-use crate::analyze::hir::{Expr, ExprType, Initializer, TypeKind};
+use crate::hir::{Expr, ExprType, Initializer, TypeKind};
 use crate::location::Location;
 use crate::parse::ast;
 
@@ -141,7 +141,7 @@ impl PureAnalyzer {
 impl TypeKind {
     /// Given a type, return the maximum number of initializers for that type
     fn type_len(&self) -> usize {
-        use crate::analyze::hir::ArrayType;
+        use crate::hir::ArrayType;
 
         match self {
             ty if ty.is_scalar() => 1,

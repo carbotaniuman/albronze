@@ -9,7 +9,7 @@ mod struct_ref {
     use std::cell::RefCell;
     use std::rc::Rc;
 
-    use crate::analyze::Variable;
+    use crate::hir::Variable;
 
     thread_local!(
         /// The global storage for all struct definitions.

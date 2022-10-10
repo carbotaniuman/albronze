@@ -1,7 +1,6 @@
 mod error;
 mod expr;
 mod fold;
-pub mod hir;
 mod init;
 mod stmt;
 
@@ -11,12 +10,12 @@ use crate::parse::Lexeme;
 use crate::parse::Parser;
 
 use crate::analyze::error::SemanticError;
-use crate::analyze::hir::{
+use crate::data::{LiteralValue, Sign, StorageClass};
+use crate::error::{ErrorHandler, Warning};
+use crate::hir::{
     Declaration, Expr, FunctionQualifiers, Initializer, Qualifiers, Stmt, StructRef, StructType,
     Symbol, TypeKind, Variable,
 };
-use crate::data::{LiteralValue, Sign, StorageClass};
-use crate::error::{ErrorHandler, Warning};
 use crate::location::{Locatable, Location};
 use crate::parse::ast;
 use crate::scope::Scope;
@@ -879,7 +878,7 @@ impl PureAnalyzer {
         decl: ast::DeclaratorType,
         location: Location,
     ) -> TypeKind {
-        use crate::analyze::hir::{ArrayType, FunctionType};
+        use crate::hir::{ArrayType, FunctionType};
         use crate::parse::ast::DeclaratorType::*;
 
         // let _guard = self.recursion_check();

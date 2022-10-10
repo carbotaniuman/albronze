@@ -1,7 +1,7 @@
 //! https://en.wikipedia.org/wiki/64-bit_computing#64-bit_data_models
 #![allow(missing_docs)]
 
-use crate::analyze::hir::{StructType, TypeKind};
+use crate::hir::{StructType, TypeKind};
 use crate::InternedStr;
 
 const CHAR_SIZE: u16 = 1;
@@ -99,7 +99,7 @@ impl TypeKind {
     ///
     /// This is the `sizeof` operator in C.
     pub fn sizeof(&self) -> Result<SIZE_T, &'static str> {
-        use crate::analyze::hir::ArrayType;
+        use crate::hir::ArrayType;
         use TypeKind::*;
 
         match self {

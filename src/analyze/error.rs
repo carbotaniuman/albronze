@@ -2,8 +2,8 @@ use thiserror::Error;
 
 use crate::InternedStr;
 
-use crate::analyze::hir::*;
 use crate::data::{ComparisonToken, StorageClass};
+use crate::hir::*;
 use crate::parse::ast::*;
 
 impl<S: Into<String>> From<S> for SemanticError {
@@ -185,7 +185,7 @@ pub enum SemanticError {
     },
 
     #[error("not a constant expression: {0}")]
-    NotConstant(crate::analyze::hir::Expr),
+    NotConstant(crate::hir::Expr),
 
     #[error("cannot dereference NULL pointer")]
     NullPointerDereference,

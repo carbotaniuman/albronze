@@ -7,6 +7,7 @@ mod analyze;
 mod arch;
 mod data;
 pub mod error;
+mod hir;
 mod intern;
 mod location;
 mod parse;
@@ -46,12 +47,9 @@ fn main() {
         r#"
 int printf(const char* s, ...);
 
-// string literals are kinda scuffed still
-extern const char* format;
-
 int main() {
     int a = 5;
-    printf(format, a);
+    printf("I am a man eating food, %d", a);
     return a;
 }
 "#
