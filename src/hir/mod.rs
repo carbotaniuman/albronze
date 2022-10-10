@@ -368,14 +368,12 @@ impl Display for Variable {
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
-#[cfg_attr(test, derive(Arbitrary))]
 pub struct Qualifiers {
     pub volatile: bool,
     pub c_const: bool,
     pub func: FunctionQualifiers,
 }
 
-#[cfg_attr(test, derive(Arbitrary))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct FunctionQualifiers {
     pub inline: bool,

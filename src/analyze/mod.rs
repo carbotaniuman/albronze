@@ -257,13 +257,6 @@ impl PureAnalyzer {
         decls
     }
 
-    //     #[cfg(test)]
-    //     #[inline(always)]
-    //     // used only for testing, so that I can keep `parse_typename` private most of the time
-    //     pub(crate) fn parse_typename_test(&mut self, ctype: ast::TypeName, location: Location) -> Type {
-    //         self.parse_typename(ctype, location)
-    //     }
-
     /// Perform checks for parsing a single type name.
     ///
     /// Type names are used most often in casts: `(int)i`
