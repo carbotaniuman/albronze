@@ -1,6 +1,6 @@
-mod ast;
+pub mod ast;
 mod decl;
-mod error;
+pub mod error;
 mod expr;
 mod stmt;
 
@@ -15,7 +15,7 @@ use ast::ExternalDeclaration;
 use std::collections::VecDeque;
 use std::mem;
 
-type Lexeme = LexResult<Locatable<TokenKind>>;
+pub type Lexeme = LexResult<Locatable<TokenKind>>;
 type SyntaxResult<T> = Result<T, Locatable<SyntaxError>>;
 
 pub struct Parser<I: Iterator<Item = Lexeme>> {

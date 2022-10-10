@@ -1,18 +1,17 @@
 //! 6.7.9 Initialization
 
-use crate::error::{ErrorHandler, Warning};
-use crate::location::{Locatable, Location};
-use crate::parse::error::SyntaxError;
-use crate::preprocess::{EncodingKind, Keyword, LexResult, LiteralKind, TokenKind};
-use crate::scope::Scope;
-use crate::InternedStr;
-use ast::ExternalDeclaration;
+use crate::analyze::error::SemanticError;
+use crate::analyze::hir::{Expr, ExprType, Initializer, TypeKind};
+use crate::location::Location;
+use crate::parse::ast;
+
+use super::PureAnalyzer;
 
 impl PureAnalyzer {
     pub(super) fn parse_initializer(
         &mut self,
         init: ast::Initializer,
-        ctype: &Type,
+        ctype: &TypeKind,
         location: Location,
     ) -> Initializer {
         use ast::Initializer::{Aggregate, Scalar};
@@ -24,7 +23,7 @@ impl PureAnalyzer {
         // The only time (that I know of) that an expression will initialize a non-scalar
         // is for character literals.
         let is_char_array = match ctype {
-            Type::Array(inner, _) => inner.is_char(),
+            TypeKind::Array(inner, _) => inner.is_char(),
             _ => false,
         };
         // See section 6.7.9 of the C11 standard:
@@ -50,7 +49,7 @@ impl PureAnalyzer {
     fn check_aggregate_overflow(
         &mut self,
         list: Vec<ast::Initializer>,
-        ctype: &Type,
+        ctype: &TypeKind,
         location: Location,
     ) -> Initializer {
         let len = list.len();
@@ -70,7 +69,7 @@ impl PureAnalyzer {
     fn aggregate_initializer(
         &mut self,
         list: &mut std::iter::Peekable<impl Iterator<Item = ast::Initializer>>,
-        elem_type: &Type,
+        elem_type: &TypeKind,
         location: Location,
     ) -> Initializer {
         use ast::Initializer::{Aggregate, Scalar};
@@ -85,7 +84,7 @@ impl PureAnalyzer {
             let inner = elem_type.type_at(elems.len()).unwrap_or_else(|err| {
                 // int a[1] = {1, 2};
                 self.err(err, location);
-                Type::Error
+                TypeKind::Error
             });
             // int a[][3] = {{1,2,3}}
             //               ^
@@ -106,7 +105,7 @@ impl PureAnalyzer {
                     //               ^
                     // type is aggregate and initializer is scalar
                     // see if we can short circuit int[][3] -> int[3]
-                    if inner != Type::Error && !inner.is_scalar() {
+                    if inner != TypeKind::Error && !inner.is_scalar() {
                         // Note: this element is _not_ consumed
                         self.aggregate_initializer(list, &inner, location)
                     // type is scalar and initializer is scalar
@@ -139,25 +138,27 @@ impl PureAnalyzer {
     }
 }
 
-impl Type {
+impl TypeKind {
     /// Given a type, return the maximum number of initializers for that type
     fn type_len(&self) -> usize {
-        use types::ArrayType;
+        use crate::analyze::hir::ArrayType;
+
         match self {
             ty if ty.is_scalar() => 1,
-            Type::Array(_, ArrayType::Fixed(size)) => *size as usize,
-            Type::Array(_, ArrayType::Unbounded) => 0,
-            Type::Struct(st) | Type::Union(st) => st.members().len(),
-            Type::Function { .. } | Type::Error => 1,
+            TypeKind::Array(_, ArrayType::Fixed(size)) => *size as usize,
+            TypeKind::Array(_, ArrayType::Unbounded) => 0,
+            TypeKind::Struct(st) | TypeKind::Union(st) => st.members().len(),
+            TypeKind::Function { .. } | TypeKind::Error => 1,
             _ => unimplemented!("type checking for {}", self),
         }
     }
+
     /// Given a type and an index,
     /// return the type expected at that index in the initializer.
     ///
     /// e.g. if `struct s { int i; float f; };` is in scope,
     /// `type_at(s, 0)` will be `int` and `type_at(s, 1)` will be `float`
-    fn type_at(&self, index: usize) -> Result<Type, SemanticError> {
+    fn type_at(&self, index: usize) -> Result<TypeKind, SemanticError> {
         match self {
             ty if ty.is_scalar() => {
                 if index == 0 {
@@ -169,15 +170,15 @@ impl Type {
                     ))
                 }
             }
-            Type::Array(inner, _) => Ok((**inner).clone()),
-            Type::Struct(struct_type) => {
+            TypeKind::Array(inner, _) => Ok((**inner).clone()),
+            TypeKind::Struct(struct_type) => {
                 let symbols = struct_type.members();
                 symbols.get(index).map_or_else(
                     || Err(SemanticError::TooManyMembers(symbols.len(), index)),
                     |symbol| Ok(symbol.ctype.clone()),
                 )
             }
-            Type::Union(struct_type) => {
+            TypeKind::Union(struct_type) => {
                 if index != 0 {
                     return Err("can only initialize first member of an enum".into());
                 }
@@ -185,9 +186,9 @@ impl Type {
                 Ok(members
                     .first()
                     .map(|m| m.ctype.clone())
-                    .unwrap_or(Type::Error))
+                    .unwrap_or(TypeKind::Error))
             }
-            Type::Function { .. } | Type::Error => Ok(Type::Error),
+            TypeKind::Function { .. } | TypeKind::Error => Ok(TypeKind::Error),
             _ => unimplemented!("type checking for aggregate initializers of type {}", self),
         }
     }

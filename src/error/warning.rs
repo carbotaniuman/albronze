@@ -23,15 +23,16 @@ pub enum Warning {
     #[error("extraneous semicolon in {0}")]
     ExtraneousSemicolon(&'static str),
 
-    // #[error("'{0}' qualifier on return type has no effect")]
-    // FunctionQualifiersIgnored(hir::Qualifiers),
+    #[error("'{0}' qualifier on return type has no effect")]
+    FunctionQualifiersIgnored(crate::analyze::hir::Qualifiers),
 
-    // #[error("duplicate '{0}' declaration specifier{}",
-    //         if *.1 > 1 { format!(" occurs {} times", .1) } else { String::new() })]
-    // DuplicateSpecifier(ast::UnitSpecifier, usize),
+    #[error("duplicate '{0}' declaration specifier{}",
+            if *.1 > 1 { format!(" occurs {} times", .1) } else { String::new() })]
+    DuplicateSpecifier(crate::parse::ast::UnitSpecifier, usize),
 
-    // #[error("qualifiers in type casts are ignored")]
-    // IgnoredQualifier(hir::Qualifiers),
+    #[error("qualifiers in type casts are ignored")]
+    IgnoredQualifier(crate::analyze::hir::Qualifiers),
+
     #[error("declaration does not declare anything")]
     EmptyDeclaration,
 

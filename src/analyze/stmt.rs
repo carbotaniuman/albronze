@@ -1,16 +1,16 @@
-use crate::error::{ErrorHandler, Warning};
+use crate::analyze::error::SemanticError;
+use crate::analyze::hir::{Expr, Stmt, StmtType, TypeKind};
+use crate::analyze::FunctionAnalyzer;
+use crate::data::LiteralValue;
 use crate::location::{Locatable, Location};
-use crate::parse::error::SyntaxError;
-use crate::preprocess::{EncodingKind, Keyword, LexResult, LiteralKind, TokenKind};
-use crate::scope::Scope;
-use crate::InternedStr;
-use ast::ExternalDeclaration;
+use crate::parse::ast;
 
 impl FunctionAnalyzer<'_> {
     #[inline(always)]
     fn expr(&mut self, expr: ast::Expr) -> Expr {
         self.analyzer.expr(expr)
     }
+
     pub(crate) fn parse_stmt(&mut self, stmt: ast::Stmt) -> Stmt {
         use ast::StmtType::*;
         use StmtType as S;
@@ -103,14 +103,7 @@ impl FunctionAnalyzer<'_> {
             // 6.7 Declarations
             Decl(decls) => S::Decl(self.analyzer.parse_declaration(decls, stmt.location)),
         };
-        let data = if !self.analyzer.decl_side_channel.is_empty() {
-            let decls = std::mem::replace(&mut self.analyzer.decl_side_channel, Vec::new());
-            // this location is wrong for the declarations, but it's _probably_ fine
-            let decl_stmt = Stmt::new(S::Decl(decls), stmt.location);
-            S::Compound(vec![decl_stmt, Stmt::new(data, stmt.location)])
-        } else {
-            data
-        };
+
         Locatable::new(data, stmt.location)
     }
     // 6.8.1 Labeled statements
@@ -125,7 +118,7 @@ impl FunctionAnalyzer<'_> {
         let expr = match self.expr(expr).const_fold() {
             Ok(e) => e,
             Err(err) => {
-                self.analyzer.error_handler.push_back(err);
+                self.analyzer.error_handler.push_error(err);
                 Expr::zero(location)
             }
         };
@@ -149,11 +142,9 @@ impl FunctionAnalyzer<'_> {
     // 6.8.6.4 The return statement
     // A value of `None` for `expr` means `return;`
     fn return_statement(&mut self, expr: Option<ast::Expr>, location: Location) -> StmtType {
-        use crate::data::Type;
-
         let expr = expr.map(|e| self.expr(e));
         let ret_type = &self.metadata.return_type;
-        match (expr, *ret_type != Type::Void) {
+        match (expr, *ret_type != TypeKind::Void) {
             // void f() { return ;}
             (None, false) => StmtType::Return(None),
             // int f() { return; }
@@ -202,7 +193,7 @@ mod tests {
                 metadata: FunctionData {
                     id: "<test func>".into(),
                     location: Location::default(),
-                    return_type: Type::Int(true),
+                    return_type: TypeKind::Int(true),
                 },
             };
             func_analyzer.parse_stmt(stmt)

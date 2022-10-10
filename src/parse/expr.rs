@@ -283,7 +283,6 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
             let value = get_str!(literal_val);
             let parsed = match literal_kind {
                 LiteralKind::Number => {
-                    println!("Parsing {}", value);
                     let integral = if let Some(num) = value
                         .strip_prefix("0x")
                         .or_else(|| value.strip_prefix("0X"))
@@ -329,7 +328,8 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
                     if matches!(literal_kind, LiteralKind::String(_)) {
                         Ok(LiteralValue::String(ret))
                     } else {
-                        Ok(LiteralValue::Char(ret.pop().unwrap_or_else(|| todo!())))
+                        // Ok(LiteralValue::Char(ret.pop().unwrap_or_else(|| todo!())))
+                        todo!()
                     }
                 }
             };

@@ -4,6 +4,7 @@
 #![allow(unused_assignments)]
 
 mod analyze;
+mod arch;
 mod data;
 pub mod error;
 mod intern;
@@ -12,6 +13,7 @@ mod parse;
 mod preprocess;
 mod scope;
 
+use crate::analyze::Analyzer;
 use crate::parse::Parser;
 use crate::preprocess::{pretty_print, Keyword, TokenKind};
 
@@ -42,8 +44,16 @@ fn main() {
     let value = arcstr::format!(
         "{}",
         r#"
-#define A x
-A
+int printf(const char* s, ...);
+
+// string literals are kinda scuffed still
+extern const char* format;
+
+int main() {
+    int a = 5;
+    printf(format, a);
+    return a;
+}
 "#
     );
     let mut files = Files::new();
@@ -83,13 +93,19 @@ A
         false,
     );
 
+    let mut analyzer = Analyzer::new(parser, false);
+
     let mut out = Vec::new();
     loop {
-        match parser.next() {
+        match analyzer.next() {
             Some(i) => out.push(i),
             None => break,
         }
     }
-    println!("{:#?}", out);
-    println!("{:?}", parser.warnings());
+
+    for i in out {
+        println!("{}", i.unwrap().data);
+        println!();
+    }
+    println!("{:?}", analyzer.warnings());
 }
