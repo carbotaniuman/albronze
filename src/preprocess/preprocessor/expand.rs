@@ -544,38 +544,42 @@ impl Preprocessor {
         disabling_contexts: &mut IndexSet<InternedStr>,
         index: &mut usize,
     ) -> Option<Locatable<TokenKind>> {
-        while *index < expansion_buffer.len() {
-            let token = expansion_buffer[*index];
-            match token {
-                CppToken::Token(token, ..) => return Some(token),
-                CppToken::EndMacro(id) => {
-                    disabling_contexts.remove(&id);
-                }
-            }
-
-            *index += 1;
-        }
-
         loop {
-            let next = lexer.next();
-            let token = match next {
-                Some(token) => token,
-                None => {
-                    return None;
+            if *index < expansion_buffer.len() {
+                let token = expansion_buffer[*index];
+                match token {
+                    CppToken::Token(token, ..) => return Some(token),
+                    CppToken::EndMacro(id) => {
+                        disabling_contexts.remove(&id);
+                    }
                 }
-            };
 
-            let token = match token {
-                Ok(token) => token,
-                Err(e) => todo!("{:?}", e),
-            };
+                *index += 1;
+            } else {
+                let next = lexer.next();
+                let token = match next {
+                    Some(token) => token,
+                    None => {
+                        // TODO
+                        // let location = lexer.span(lexer.offset());
+                        // lexer.err_loc(LexError::NoNewlineAtEOF, location);
 
-            if let TokenKind::Identifier(ident) = token.data {
-                if self.poisoned.contains(&ident) {
-                    todo!("poisoned")
+                        return None;
+                    }
+                };
+
+                let token = match token {
+                    Ok(token) => token,
+                    Err(e) => todo!("{:?}", e),
+                };
+
+                if let TokenKind::Identifier(ident) = token.data {
+                    if self.poisoned.contains(&ident) {
+                        todo!("poisoned")
+                    }
                 }
+                expansion_buffer.push(CppToken::Token(token, false));
             }
-            expansion_buffer.push(CppToken::Token(token, false));
         }
     }
 }

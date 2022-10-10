@@ -45,13 +45,14 @@ fn main() {
     let value = arcstr::format!(
         "{}",
         r#"
-int printf(const char* s, ...);
+#define A(x, y) x##y
+#define B(x, y) A(x, y)
 
-int main() {
-    int a = 5;
-    printf("I am a man eating food, %d", a);
-    return a;
-}
+#define FOO 3
+#define BAR 6
+
+A(FOO, BAR)
+B(FOO, BAR)        
 "#
     );
     let mut files = Files::new();
