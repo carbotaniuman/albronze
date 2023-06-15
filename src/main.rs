@@ -15,6 +15,7 @@ mod preprocess;
 mod scope;
 
 use crate::analyze::Analyzer;
+use crate::analyze::Folder;
 use crate::parse::Parser;
 use crate::preprocess::{pretty_print, Keyword, TokenKind};
 
@@ -43,16 +44,8 @@ fn main() {
     let mut processor = preprocess::Preprocessor::new(manager, true);
 
     let value = arcstr::format!(
-        "{}",
-        r#"
-#define A(x, y) x##y
-#define B(x, y) A(x, y)
-
-#define FOO 3
-#define BAR 6
-
-A(FOO, BAR)
-B(FOO, BAR)        
+        "{}", r#"
+3U
 "#
     );
     let mut files = Files::new();
@@ -92,19 +85,30 @@ B(FOO, BAR)
         false,
     );
 
-    let mut analyzer = Analyzer::new(parser, false);
-
-    let mut out = Vec::new();
-    loop {
-        match analyzer.next() {
-            Some(i) => out.push(i),
-            None => break,
-        }
+    use crate::analyze::PureAnalyzer;
+    let expr = parser.expr().unwrap();
+    if !parser.is_empty() {
+        todo!()
     }
+    let expr = PureAnalyzer::new().expr(expr);
 
-    for i in out {
-        println!("{}", i.unwrap().data);
-        println!();
-    }
-    println!("{:?}", analyzer.warnings());
+    let folder = crate::analyze::PreprocessorFolder;
+    let expr = folder.const_fold(&expr);
+    println!("{:?}", expr);
+
+    // let mut analyzer = Analyzer::new(parser, false);
+
+    // let mut out = Vec::new();
+    // loop {
+    //     match analyzer.next() {
+    //         Some(i) => out.push(i),
+    //         None => break,
+    //     }
+    // }
+
+    // for i in out {
+    //     println!("{}", i.unwrap().data);
+    //     println!();
+    // }
+    // println!("{:?}", analyzer.warnings());
 }

@@ -1,4 +1,4 @@
-//! https://en.wikipedia.org/wiki/64-bit_computing#64-bit_data_models
+// https://en.wikipedia.org/wiki/64-bit_computing#64-bit_data_models
 #![allow(missing_docs)]
 
 use crate::hir::{StructType, TypeKind};

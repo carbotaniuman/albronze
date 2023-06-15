@@ -238,7 +238,7 @@ impl Expr {
     /// `Ok(Some(_))`: Successfuly folded
     /// `Ok(None)`: Non-foldable expression
     /// `Err(_)`: Error while folding
-    fn literal_bin_op<F>(
+    pub fn literal_bin_op<F>(
         self,
         other: Expr,
         location: &Location,

@@ -2,7 +2,10 @@ mod error;
 mod expr;
 mod fold;
 mod init;
+mod new_fold;
 mod stmt;
+
+pub use new_fold::*;
 
 use std::collections::{HashSet, VecDeque};
 

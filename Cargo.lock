@@ -21,6 +21,7 @@ dependencies = [
  "codespan",
  "counter",
  "derive_more",
+ "dyn_safe",
  "hexponent",
  "indexmap",
  "insta",
@@ -117,6 +118,21 @@ dependencies = [
  "rustc_version",
  "syn",
 ]
+
+[[package]]
+name = "dyn_safe"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c62e14e82043c4f8b208b4f51ac601a03cc5516b599964558ae9de5e16326c35"
+dependencies = [
+ "dyn_safe-proc_macros",
+]
+
+[[package]]
+name = "dyn_safe-proc_macros"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c63dfc1cf3db27519248f76ed8fc30372a3672999892b6980e55dab644c0c02"
 
 [[package]]
 name = "encode_unicode"

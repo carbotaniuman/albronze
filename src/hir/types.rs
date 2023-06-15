@@ -171,7 +171,7 @@ pub enum TypeKind {
 }
 
 impl TypeKind {
-    /// https://stackoverflow.com/questions/14821936/what-is-a-scalar-object-in-c#14822074
+    // https://stackoverflow.com/questions/14821936/what-is-a-scalar-object-in-c#14822074
     #[inline]
     pub fn is_scalar(&self) -> bool {
         use TypeKind::*;
