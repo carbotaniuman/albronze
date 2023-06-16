@@ -233,7 +233,7 @@ impl Preprocessor {
                                 }
                             }
 
-                            t => todo!("directive {t:?} not implemetned"),
+                            t => todo!("directive {t:?}"),
                         };
 
                         if let Err(e) = res {

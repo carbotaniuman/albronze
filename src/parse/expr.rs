@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use super::*;
 use crate::data::{AssignmentToken, ComparisonToken, LiteralValue};
 use crate::get_str;
-use crate::parse::ast::{Expr, ExprType, TypeName};
+use crate::parse::ast::{LiteralData, Expr, ExprType, TypeName};
 
 use crate::preprocess::{DigraphKind, Keyword};
 
@@ -256,6 +256,70 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
         }
         Ok(inner)
     }
+
+    fn number_literal(value: &str) -> Result<LiteralData, ()> {
+        // So, integer literals in C are actually pretty complicated, given
+        // hexadecimal, integral, and octal. We do parsing in 3 steps here.
+
+        let is_hexdigit = |f: char| f.is_ascii_hexdigit() || f == '.';
+        let is_digit = |f: char| f.is_ascii_digit() || f == '.';
+        
+        // We try the hexadecimal case first
+        if let Some(remain) = value
+            .strip_prefix("0x")
+            .or_else(|| value.strip_prefix("0X"))
+        {
+            // If we find hexdigits in the string
+            if let Some(index) = remain.rfind(is_hexdigit) {
+                // We're goign to slice the original value now, 
+                // so add 2 for the leading 0x. We also need to add 1
+                // so that the found hexdigit is included in the actual
+                // number.
+                let corrected_index = index + 2 + 1;
+                let number = &value[0..corrected_index];
+                let suffix = &value[corrected_index..];
+
+                // let number = i64::   (num, 16);
+                println!("1 {:?} {:?}", number, suffix);
+
+                return Ok(LiteralData::Number(number.into(), suffix.into()));
+            }
+        }
+
+        // We try the octal case next. In the event that there is this is a
+        // floating point literal with a `.`, that will be correctly handled
+        // in the analyzer, which we've delayed parsing to.
+        if let Some(remain) = value
+            .strip_prefix("0")
+            .or_else(|| value.strip_prefix("0"))
+        {
+            if let Some(index) = remain.rfind(is_digit) {
+                // Add 1 for the leading 0, and 1 to shift the index
+                let corrected_index = index + 1 + 1;
+                let number = &value[0..corrected_index];
+                let suffix = &value[corrected_index..];
+
+                println!("2 {:?} {:?}", number, suffix);
+
+                return Ok(LiteralData::Number(number.into(), suffix.into()));
+            }
+        }
+
+        // Otherwise it's just base 10.
+        if let Some(index) = value.rfind(is_digit) {
+            // Just 1 to shift the index now
+            let corrected_index = index + 1;
+            let number = &value[0..corrected_index];
+            let suffix = &value[corrected_index..];
+
+            println!("3 {:?} {:?}", number, suffix);
+
+            return Ok(LiteralData::Number(number.into(), suffix.into()));
+        }
+
+        unreachable!()
+    } 
+
     // postfix_expression: primary_expression postfix_op*
     // primary_expression: '(' expr ')' | 'sizeof' unary_expression | 'alignof' unary_expression | ID | LITERAL
     // <http://www.quut.com/c/ANSI-C-grammar-y.html#postfix_expression>
@@ -281,27 +345,9 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
         }) = self.match_literal()
         {
             let value = get_str!(literal_val);
-            let parsed = match literal_kind {
+            let parsed: Result<_, ()> = match literal_kind {
                 LiteralKind::Number => {
-                    let integral = if let Some(num) = value
-                        .strip_prefix("0x")
-                        .or_else(|| value.strip_prefix("0X"))
-                    {
-                        i64::from_str_radix(num, 16)
-                    } else if let Some(num) = value
-                        .strip_prefix("0b")
-                        .or_else(|| value.strip_prefix("0B"))
-                    {
-                        i64::from_str_radix(num, 2)
-                    } else if value == "0" {
-                        Ok(0)
-                    } else if let Some(num) = value.strip_prefix("0") {
-                        i64::from_str_radix(num, 8)
-                    } else {
-                        i64::from_str_radix(value, 10)
-                    };
-
-                    integral.map(LiteralValue::Int)
+                    Self::number_literal(value)
                 }
                 LiteralKind::String(_) | LiteralKind::Char(_) => {
                     let mut ret = String::with_capacity(value.len());
@@ -325,8 +371,9 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
                         }
                     }
 
-                    if matches!(literal_kind, LiteralKind::String(_)) {
-                        Ok(LiteralValue::String(ret))
+                    if let LiteralKind::String(encoding) = literal_kind {
+                        // todo!() fix this
+                        Ok(LiteralData::String(ret, unsafe { std::mem::transmute(encoding) }))
                     } else {
                         // Ok(LiteralValue::Char(ret.pop().unwrap_or_else(|| todo!())))
                         todo!()
@@ -334,9 +381,14 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
                 }
             };
 
+            // match parsed {
+            //     Ok(literal) => location.with(literal).map(ExprType::Literal),
+            //     Err(err) => return Err(location.with(err.into())),
+            // }
+
             match parsed {
                 Ok(literal) => location.with(literal).map(ExprType::Literal),
-                Err(err) => return Err(location.with(err.into())),
+                Err(_) => unreachable!(),
             }
         } else {
             return Err(self.next_location().with(SyntaxError::MissingPrimary));

@@ -434,11 +434,27 @@ pub enum StmtType {
 
 pub type Expr = Locatable<ExprType>;
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum EncodingKind {
+    Normal,
+    Utf8,
+    Utf16,
+    Utf32,
+    Wide,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum LiteralData {
+    Number(InternedStr, InternedStr),
+    String(String, EncodingKind),
+    Char(InternedStr, EncodingKind),
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExprType {
     // primary
     Id(InternedStr),
-    Literal(LiteralValue),
+    Literal(LiteralData),
 
     // postfix
     FuncCall(Box<Expr>, Vec<Expr>),
@@ -491,7 +507,8 @@ impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.data {
             ExprType::Comma(left, right) => write!(f, "{}, {}", *left, *right),
-            ExprType::Literal(token) => write!(f, "{}", token),
+            // ExprType::Literal(token) => write!(f, "{}", token),
+            ExprType::Literal(token) => todo!(),
             ExprType::Id(symbol) => write!(f, "{}", symbol),
             ExprType::Add(left, right) => write!(f, "({}) + ({})", left, right),
             ExprType::Sub(left, right) => write!(f, "({}) - ({})", left, right),

@@ -22,7 +22,7 @@ impl PureAnalyzer {
         // let _guard2 = self.recursion_check();
         match expr.data {
             // 1 | "str" | 'a'
-            Literal(lit) => literal(lit, expr.location),
+            Literal(lit) => literal_convert(lit, expr.location),
             // x
             Id(id) => self.parse_id(id, expr.location),
             // (int)x
@@ -958,7 +958,20 @@ impl PureAnalyzer {
     }
 }
 
-// literal
+fn literal_convert(literal: ast::LiteralData, location: Location) -> Expr {
+    use ast::LiteralData::*;
+    match literal {
+        Number(a, b) => todo!(),
+        Float(a, b) => todo!(),
+        String(a, b) => todo!(),
+        Char(a, b) => todo!(),
+    }
+}
+
+// literal - should only be used for hardcoded values, parsed
+// values should be using `literal_convert` above...
+// this is a very suspect function though, as it really should be running
+// through all of the type boundary tests instead of just... not doing that
 pub(super) fn literal(literal: LiteralValue, location: Location) -> Expr {
     use crate::hir::ArrayType;
 
