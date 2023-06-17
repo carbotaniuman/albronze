@@ -72,5 +72,7 @@ define_test!(division, PreprocessorFolder, "5 / 5");
 define_test!(bitwise_not, PreprocessorFolder, "~5");
 
 // Our AST construction is just busted, we'll fix this later
-// define_test!(logical_not, PreprocessorFolder, "!5");
-// define_test!(ternary, PreprocessorFolder, "1 ? 2 : 3");
+define_test!(logical_not_1, PreprocessorFolder, "!5");
+define_test!(logical_not_2, PreprocessorFolder, "!0");
+define_test!(ternary_1, PreprocessorFolder, "1 ? 2 : 3");
+define_test!(ternary_2, PreprocessorFolder, "!1 ? 2 : 3");

@@ -1,0 +1,11 @@
+---
+source: src/analyze/new_fold/tests/mod.rs
+expression: "process(PreprocessorFolder, arcstr::literal!(\"1 ? 2 : 3\"))"
+---
+Ok(
+    Literal(
+        Int(
+            2,
+        ),
+    ),
+)
