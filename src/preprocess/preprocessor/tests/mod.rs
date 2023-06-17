@@ -81,6 +81,7 @@ define_test! {recursive_self_ref}
 define_test! {recursive}
 define_test! {scmd}
 define_test! {sequence_iteration}
+define_test! {stringify_strings}
 define_test! {stringify}
 define_test! {with_comments vararg_stringify}
 define_test! {vararg}

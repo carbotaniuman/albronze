@@ -959,12 +959,46 @@ impl PureAnalyzer {
 }
 
 fn literal_convert(literal: ast::LiteralData, location: Location) -> Expr {
+    use crate::hir::ArrayType;
+    use crate::get_str;
+    use std::str::FromStr;
+
     use ast::LiteralData::*;
-    match literal {
-        Number(a, b) => todo!(),
-        Float(a, b) => todo!(),
-        String(a, b) => todo!(),
-        Char(a, b) => todo!(),
+    let (ctype, literal) = match literal {
+        Integer { value, suffix, ..  } => {
+            let suffix = get_str!(suffix);
+            let is_unsigned = suffix.contains("U") || suffix.contains("u");
+            let sign = if is_unsigned { Sign::Unsigned } else { Sign::Signed };
+            // todo!() actually fix this lol
+            (
+                if suffix.contains("LL") || suffix.contains("ll") {
+                    TypeKind::LongLong(sign)
+                } else if suffix.contains("L") || suffix.contains("l") {
+                    TypeKind::Long(sign)
+                } else {
+                    TypeKind::Int(sign)
+                },
+                LiteralValue::Int(i64::from_str(get_str!(value)).unwrap())
+            )
+        },
+        Float { .. } => todo!(),
+        String(s, _) => {
+            let len = s.len() as u64;
+            let ty = TypeKind::Array(
+                Box::new(TypeKind::Char(None)),
+                ArrayType::Fixed(len)
+            );
+
+            (ty, LiteralValue::String(s))
+        },
+        _ => todo!(),
+    };
+
+    Expr {
+        lval: false,
+        ctype,
+        location,
+        expr: ExprType::Literal(literal),
     }
 }
 

@@ -43,11 +43,7 @@ fn main() {
     let mut manager = preprocess::FileManager::new();
     let mut processor = preprocess::Preprocessor::new(manager, true);
 
-    let value = arcstr::format!(
-        "{}", r#"
-3U
-"#
-    );
+    let value = arcstr::format!("{}", std::fs::read_to_string("test.c").unwrap());
     let mut files = Files::new();
     let id = files.add(
         "laser",

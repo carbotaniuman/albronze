@@ -166,6 +166,9 @@ impl Lexer {
                         if let Some('\'') = self.peek() {
                             self.next_char();
                             ret.push('\'');
+                        } else if let Some('\\') = self.peek() {
+                            self.next_char();
+                            ret.push('\\');
                         }
                     }
                     '\'' => break,
@@ -194,6 +197,9 @@ impl Lexer {
                         if let Some('\"') = self.peek() {
                             self.next_char();
                             ret.push('\"');
+                        } else if let Some('\\') = self.peek() {
+                            self.next_char();
+                            ret.push('\\');
                         }
                     }
                     '\"' => break,

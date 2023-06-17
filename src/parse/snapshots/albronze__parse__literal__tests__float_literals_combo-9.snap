@@ -1,0 +1,14 @@
+---
+source: src/parse/literal.rs
+description: ""
+info: 1.1e5asd
+---
+Ok(
+    Float {
+        significand: "1",
+        fraction: "1",
+        exponent: "5",
+        suffix: "asd",
+        radix: Decimal,
+    },
+)

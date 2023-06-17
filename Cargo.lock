@@ -18,6 +18,7 @@ name = "albronze"
 version = "0.1.0"
 dependencies = [
  "arcstr",
+ "bitflags",
  "codespan",
  "counter",
  "derive_more",
@@ -25,6 +26,7 @@ dependencies = [
  "hexponent",
  "indexmap",
  "insta",
+ "itertools",
  "lasso",
  "lazy_static",
  "static_assertions",
@@ -42,6 +44,12 @@ name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
+
+[[package]]
+name = "bitflags"
+version = "2.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6dbe3c979c178231552ecba20214a8272df4e09f232a87aef4320cf06539aded"
 
 [[package]]
 name = "cfg-if"
@@ -135,6 +143,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c63dfc1cf3db27519248f76ed8fc30372a3672999892b6980e55dab644c0c02"
 
 [[package]]
+name = "either"
+version = "1.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
+
+[[package]]
 name = "encode_unicode"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -203,6 +217,15 @@ dependencies = [
  "serde",
  "similar",
  "yaml-rust",
+]
+
+[[package]]
+name = "itertools"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
 ]
 
 [[package]]

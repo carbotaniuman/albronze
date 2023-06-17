@@ -1,0 +1,14 @@
+---
+source: src/parse/literal.rs
+description: ""
+info: "0x1.p5"
+---
+Ok(
+    Float {
+        significand: "1",
+        fraction: "",
+        exponent: "5",
+        suffix: "",
+        radix: Hexadecimal,
+    },
+)

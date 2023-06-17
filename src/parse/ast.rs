@@ -1,4 +1,4 @@
-use crate::data::{AssignmentToken, ComparisonToken, LiteralValue};
+use crate::data::{AssignmentToken, ComparisonToken};
 use crate::location::Locatable;
 use crate::InternedStr;
 
@@ -443,9 +443,35 @@ pub enum EncodingKind {
     Wide,
 }
 
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum IntegerRadix {
+    Binary,
+    Octal,
+    Decimal,
+    Hexadecimal,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FloatRadix {
+    Decimal,
+    Hexadecimal,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum LiteralData {
-    Number(InternedStr, InternedStr),
+    Integer {
+        value: InternedStr,
+        suffix: InternedStr,
+        radix: IntegerRadix,
+    },
+    Float {
+        significand: InternedStr,
+        fraction: InternedStr,
+        exponent: InternedStr,
+        suffix: InternedStr,
+        radix: FloatRadix,
+    },
     String(String, EncodingKind),
     Char(InternedStr, EncodingKind),
 }

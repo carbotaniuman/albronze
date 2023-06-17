@@ -53,24 +53,4 @@ pub enum SyntaxError {
 
     #[error("`static` for array sizes is only allowed in function declarations")]
     StaticInConcreteArray,
-
-    #[error("overflow while parsing {}integer literal",
-        if let Some(signed) = .is_signed {
-            if *signed { "signed "} else { "unsigned "}
-        } else { "" })]
-    IntegerOverflow { is_signed: Option<bool> },
-
-    // #[error("invalid digit {digit} in {radix} constant")]
-    // InvalidDigit { digit: u32, radix: Radix },
-    #[error("underflow parsing floating literal")]
-    FloatUnderflow,
-
-    #[error("{0}")]
-    ParseInt(#[from] std::num::ParseIntError),
-
-    #[error("{0}")]
-    ParseFloat(#[from] std::num::ParseFloatError),
-
-    #[error("{0}")]
-    InvalidHexFloat(#[from] hexponent::ParseError),
 }
