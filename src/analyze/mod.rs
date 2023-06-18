@@ -2,7 +2,7 @@ mod error;
 mod expr;
 mod fold;
 mod init;
-mod new_fold;
+pub mod new_fold;
 mod stmt;
 
 pub use new_fold::*;

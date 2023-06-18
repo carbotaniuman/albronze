@@ -1,0 +1,8 @@
+---
+source: src/parse/literal.rs
+description: ""
+info: "0x1.1"
+---
+Err(
+    MissingHexExponent,
+)

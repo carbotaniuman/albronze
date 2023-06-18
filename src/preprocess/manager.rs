@@ -1,14 +1,17 @@
 use arcstr::ArcStr;
 use indexmap::IndexMap;
-
 use std::path::{Path, PathBuf};
 
 use super::error::IncludeError;
+use crate::SourceKind;
+
+type Files = codespan::Files<ArcStr>;
 
 pub struct FileManager {
     /// The directories to consider as part of the system search path.
     pub search_path: Vec<PathBuf>,
-    files: IndexMap<PathBuf, ArcStr>,
+    files: IndexMap<PathBuf, (ArcStr, SourceKind)>,
+    pub reporting: Files,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -18,7 +21,26 @@ pub enum IncludeKind {
     Next,
 }
 
-pub struct FileId(usize);
+macro_rules! built_in_headers {
+    ( $($filename: literal),+ $(,)? ) => {
+        [
+            // Relative to the current file, not the crate root
+            $( ($filename, include_str!(concat!("headers/", $filename))) ),+
+        ]
+    };
+}
+
+const PRECOMPILED_HEADERS: [(&str, &str); 2] = built_in_headers! {
+    "stdarg.h",
+    "stddef.h",
+};
+
+fn get_builtin_header(expected: impl AsRef<str>) -> Option<&'static str> {
+    PRECOMPILED_HEADERS
+        .iter()
+        .find(|&(path, _)| path == &expected.as_ref())
+        .map(|x| x.1)
+}
 
 impl FileManager {
     pub fn new() -> Self {
@@ -31,6 +53,7 @@ impl FileManager {
                 Path::new("/usr/include").into(),
             ],
             files: IndexMap::new(),
+            reporting: Files::new(),
         }
     }
     fn find_include_path(
@@ -98,19 +121,19 @@ impl FileManager {
         filename: &Path,
         current_path: &Path,
         kind: IncludeKind,
-    ) -> Result<(ArcStr, FileId), IncludeError> {
-        let (src, id) = match self.find_include_path(&filename, current_path, kind) {
+    ) -> Result<(ArcStr, SourceKind), IncludeError> {
+        let (src, kind) = match self.find_include_path(&filename, current_path, kind) {
             Ok(path) => {
-                if let Some((id, _, src)) = self.files.get_full(&path) {
-                    (src.clone(), id)
+                if let Some(data) = self.files.get(&path) {
+                    data.clone()
                 } else {
-                    let src = std::fs::read_to_string(&path)
-                        .map_err(|err| IncludeError::IO(err.to_string()))?;
+                    let src: ArcStr = std::fs::read_to_string(&path)
+                        .map_err(|err| IncludeError::IO(err.to_string()))?.into();
 
+                    let id = self.reporting.add(path.clone(), src.clone());
                     let entry = self.files.entry(path);
-                    let saved_index = entry.index();
 
-                    (entry.or_insert(ArcStr::from(src)).clone(), saved_index)
+                    entry.or_insert((src, SourceKind::File(id))).clone()
                 }
             }
             Err(not_found) => {
@@ -119,19 +142,17 @@ impl FileManager {
                     Some(f) => f,
                 };
 
-                // TODO: wire in builtins
-                // match get_builtin_header(filename) {
-                //     Some(file) => {
-                //         let mut path = PathBuf::from("<builtin>");
-                //         path.push(filename);
-                //         (path, ArcStr::from(file))
-                //     }
-                //     None => return Err(not_found),
-                // }
-                return Err(not_found);
+                match get_builtin_header(filename) {
+                    Some(file) => {
+                        let mut path = PathBuf::from("<builtin>");
+                        path.push(filename);
+                        (ArcStr::from(file), SourceKind::Generated)
+                    }
+                    None => return Err(not_found),
+                }
             }
         };
 
-        Ok((src, FileId(id)))
+        Ok((src, kind))
     }
 }

@@ -1,0 +1,10 @@
+#define __DBL_MAX__ 1.797693134862315708e+308L
+#define __DBL_MIN__ 2.225073858507201383e-308L
+#define __FLT_MAX__ 3.402823466385288598e+38F
+#define __FLT_MIN__ 1.175494350822287507e-38F
+
+#define __INTPTR_TYPE__ 8
+#define __INT32_TYPE__ 4
+
+#define __linux__
+#define __x86_64__

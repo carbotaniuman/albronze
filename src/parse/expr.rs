@@ -1,9 +1,10 @@
 use std::convert::TryFrom;
 
 use super::*;
-use crate::data::{AssignmentToken, ComparisonToken, LiteralValue};
+use super::literal::number_literal;
+use crate::data::{AssignmentToken, ComparisonToken};
 use crate::get_str;
-use crate::parse::ast::{Expr, ExprType, TypeName};
+use crate::parse::ast::{LiteralData, Expr, ExprType, TypeName};
 
 use crate::preprocess::{DigraphKind, Keyword};
 
@@ -256,6 +257,9 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
         }
         Ok(inner)
     }
+
+    
+
     // postfix_expression: primary_expression postfix_op*
     // primary_expression: '(' expr ')' | 'sizeof' unary_expression | 'alignof' unary_expression | ID | LITERAL
     // <http://www.quut.com/c/ANSI-C-grammar-y.html#postfix_expression>
@@ -283,25 +287,7 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
             let value = get_str!(literal_val);
             let parsed = match literal_kind {
                 LiteralKind::Number => {
-                    let integral = if let Some(num) = value
-                        .strip_prefix("0x")
-                        .or_else(|| value.strip_prefix("0X"))
-                    {
-                        i64::from_str_radix(num, 16)
-                    } else if let Some(num) = value
-                        .strip_prefix("0b")
-                        .or_else(|| value.strip_prefix("0B"))
-                    {
-                        i64::from_str_radix(num, 2)
-                    } else if value == "0" {
-                        Ok(0)
-                    } else if let Some(num) = value.strip_prefix("0") {
-                        i64::from_str_radix(num, 8)
-                    } else {
-                        i64::from_str_radix(value, 10)
-                    };
-
-                    integral.map(LiteralValue::Int)
+                    number_literal(value)
                 }
                 LiteralKind::String(_) | LiteralKind::Char(_) => {
                     let mut ret = String::with_capacity(value.len());
@@ -325,8 +311,9 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
                         }
                     }
 
-                    if matches!(literal_kind, LiteralKind::String(_)) {
-                        Ok(LiteralValue::String(ret))
+                    if let LiteralKind::String(encoding) = literal_kind {
+                        // todo!() fix this
+                        Ok(LiteralData::String(ret, unsafe { std::mem::transmute(encoding) }))
                     } else {
                         // Ok(LiteralValue::Char(ret.pop().unwrap_or_else(|| todo!())))
                         todo!()
@@ -334,9 +321,14 @@ impl<I: Iterator<Item = Lexeme>> Parser<I> {
                 }
             };
 
+            // match parsed {
+            //     Ok(literal) => location.with(literal).map(ExprType::Literal),
+            //     Err(err) => return Err(location.with(err.into())),
+            // }
+
             match parsed {
                 Ok(literal) => location.with(literal).map(ExprType::Literal),
-                Err(err) => return Err(location.with(err.into())),
+                Err(_) => unreachable!(),
             }
         } else {
             return Err(self.next_location().with(SyntaxError::MissingPrimary));

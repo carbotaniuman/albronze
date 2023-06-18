@@ -22,7 +22,7 @@ impl PureAnalyzer {
         // let _guard2 = self.recursion_check();
         match expr.data {
             // 1 | "str" | 'a'
-            Literal(lit) => literal(lit, expr.location),
+            Literal(lit) => literal_convert(lit, expr.location),
             // x
             Id(id) => self.parse_id(id, expr.location),
             // (int)x
@@ -958,7 +958,54 @@ impl PureAnalyzer {
     }
 }
 
-// literal
+fn literal_convert(literal: ast::LiteralData, location: Location) -> Expr {
+    use crate::hir::ArrayType;
+    use crate::get_str;
+    use std::str::FromStr;
+
+    use ast::LiteralData::*;
+    let (ctype, literal) = match literal {
+        Integer { value, suffix, ..  } => {
+            let suffix = get_str!(suffix);
+            let is_unsigned = suffix.contains("U") || suffix.contains("u");
+            let sign = if is_unsigned { Sign::Unsigned } else { Sign::Signed };
+            // todo!() actually fix this lol
+            (
+                if suffix.contains("LL") || suffix.contains("ll") {
+                    TypeKind::LongLong(sign)
+                } else if suffix.contains("L") || suffix.contains("l") {
+                    TypeKind::Long(sign)
+                } else {
+                    TypeKind::Int(sign)
+                },
+                LiteralValue::Int(i64::from_str(get_str!(value)).unwrap())
+            )
+        },
+        Float { .. } => todo!(),
+        String(s, _) => {
+            let len = s.len() as u64;
+            let ty = TypeKind::Array(
+                Box::new(TypeKind::Char(None)),
+                ArrayType::Fixed(len)
+            );
+
+            (ty, LiteralValue::String(s))
+        },
+        _ => todo!(),
+    };
+
+    Expr {
+        lval: false,
+        ctype,
+        location,
+        expr: ExprType::Literal(literal),
+    }
+}
+
+// literal - should only be used for hardcoded values, parsed
+// values should be using `literal_convert` above...
+// this is a very suspect function though, as it really should be running
+// through all of the type boundary tests instead of just... not doing that
 pub(super) fn literal(literal: LiteralValue, location: Location) -> Expr {
     use crate::hir::ArrayType;
 

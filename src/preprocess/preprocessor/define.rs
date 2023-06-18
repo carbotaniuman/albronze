@@ -358,21 +358,33 @@ impl Preprocessor {
                                 }
                             };
 
-                            if let Some(t) = tokens.pop() {
-                                let to_push = match t {
-                                    ReplacementKind::Base(b) => {
-                                        ReplacementKind::Concatenate(vec![b, next])
-                                    }
-                                    ReplacementKind::Concatenate(mut v) => {
-                                        v.push(next);
-                                        ReplacementKind::Concatenate(v)
-                                    }
-                                };
-
-                                tokens.push(to_push);
-                            } else {
-                                return Err(hashhash_location
-                                    .with(CppError::HashHashMissingParameter { start: true }));
+                            loop {
+                                if let Some(t) = tokens.pop() {
+                                    let to_push = match t {
+                                        ReplacementKind::Base(BaseReplacement::Token(
+                                            Locatable {
+                                                data: Whitespace(_),
+                                                ..
+                                            },
+                                        )) => {
+                                            println!("{:?}", tokens.len());
+                                            continue;
+                                        }
+                                        ReplacementKind::Base(b) => {
+                                            ReplacementKind::Concatenate(vec![b, next])
+                                        }
+                                        ReplacementKind::Concatenate(mut v) => {
+                                            v.push(next);
+                                            ReplacementKind::Concatenate(v)
+                                        }
+                                    };
+    
+                                    tokens.push(to_push);
+                                    break;
+                                } else {
+                                    return Err(hashhash_location
+                                        .with(CppError::HashHashMissingParameter { start: true }));
+                                }
                             }
                         }
                         Hash(_) => {

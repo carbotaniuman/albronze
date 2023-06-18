@@ -2,6 +2,7 @@ pub mod ast;
 mod decl;
 pub mod error;
 mod expr;
+mod literal;
 mod stmt;
 
 use crate::error::{ErrorHandler, Warning};

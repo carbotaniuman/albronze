@@ -106,7 +106,9 @@ impl Folder for PreprocessorFolder {
             ExprType::Comma(..) | ExprType::FuncCall(..) | ExprType::Stmt(..) => {
                 return Err(expr.location.with(FoldError::Invalid))
             }
-            _ => unreachable!("should have been caught by preprocessor"),
+            ExprType::Cast(inner) if expr.ctype == TypeKind::Bool => bool_cast(self, inner)?,
+            ExprType::Cast(inner) if expr.ctype.is_integral() => self.const_fold(inner)?.expr,
+            d => unreachable!("{:?} should have been caught by preprocessor", d),
         };
 
         Ok(Expr {
@@ -319,6 +321,20 @@ fn fold_scalar_bin_op(
         _ => todo!(),
     }
 }
+
+fn bool_cast(folder: impl Folder, expr: &Expr) -> Result<ExprType, Locatable<FoldError>> {
+    let mut expr = folder.const_fold(expr)?;
+
+    use LiteralValue::*;
+    Ok(
+        match expr.expr {
+            ExprType::Literal(Int(i)) => ExprType::Literal(Int((i != 0) as i64)),
+            ExprType::Literal(UnsignedInt(i)) => ExprType::Literal(UnsignedInt((i != 0) as u64)),
+            _ => unreachable!(),
+        }
+    )
+}
+
 
 // fn cast(expr: Expr, ctype: &TypeKind) -> CompileResult<ExprType> {
 //     let expr = expr.const_fold()?;

@@ -73,9 +73,7 @@ impl Lexer {
         None
     }
     /// Remove all characters between now and the next '\n' character.
-    ///
-    /// Before: u8s{"blah `invalid tokens``\nhello // blah"}
-    /// After:  chars{"hello // blah"}
+    /// Leaves the trailing '\n' to be consumed.
     pub fn skip_line(&mut self) {
         while let Some(c) = self.peek() {
             if c == '\n' {
@@ -84,6 +82,7 @@ impl Lexer {
 
             self.next_char();
         }
+        debug_assert!(self.peek() == Some('\n') || self.peek() == None);
     }
 
     /// Remove all characters between now and the next '\n' character.
@@ -166,6 +165,9 @@ impl Lexer {
                         if let Some('\'') = self.peek() {
                             self.next_char();
                             ret.push('\'');
+                        } else if let Some('\\') = self.peek() {
+                            self.next_char();
+                            ret.push('\\');
                         }
                     }
                     '\'' => break,
@@ -194,6 +196,9 @@ impl Lexer {
                         if let Some('\"') = self.peek() {
                             self.next_char();
                             ret.push('\"');
+                        } else if let Some('\\') = self.peek() {
+                            self.next_char();
+                            ret.push('\\');
                         }
                     }
                     '\"' => break,

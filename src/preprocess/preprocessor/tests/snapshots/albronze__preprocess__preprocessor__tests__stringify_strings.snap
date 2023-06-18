@@ -1,0 +1,9 @@
+---
+source: src/preprocess/preprocessor/tests/mod.rs
+expression: pretty_print(stringify_strings)
+---
+"\"\""
+"\"A\""
+"\"a\\\"\\\"\\\\\""
+"\"\\u1234\""
+"\"\\U12345678\""
