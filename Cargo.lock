@@ -20,6 +20,7 @@ dependencies = [
  "arcstr",
  "bitflags",
  "codespan",
+ "codespan-reporting",
  "counter",
  "derive_more",
  "dyn_safe",

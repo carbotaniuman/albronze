@@ -1,3 +1,4 @@
+mod conditional;
 mod define;
 mod expand;
 
@@ -14,7 +15,6 @@ use super::manager::{FileManager, IncludeKind};
 use super::token::*;
 
 use arcstr::ArcStr;
-use codespan::FileId;
 use derive_more::From;
 use indexmap::IndexSet;
 
@@ -65,13 +65,12 @@ enum MacroKind {
 
 type Definitions = HashMap<InternedStr, (Macro, Location)>;
 
-/// Keeps track of the state of a conditional inclusion directive.
+/// Keeps track of (part of) the state of a
+/// conditional inclusion directive.
 ///
 /// `If` means we are currently processing an `#if`,
 /// `Elif` means an `#elif`, and `Else` means an `#else`.
 ///
-/// There are more states, but they are tracked internally to `consume_directive()`.
-/// The state diagram looks like this (pipe to `xdot -` for visualization):
 ///
 /// ```dot
 /// strict digraph if_state {
@@ -97,12 +96,76 @@ type Definitions = HashMap<InternedStr, (Macro, Location)>;
 ///    ELSE -> END [label="#endif"]
 ///  }
 /// ```
-#[derive(Copy, Clone, Debug)]
-enum IfState {
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum IfKind {
     If,
     Elif,
     Else,
 }
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum IfMatched {
+    // No #if or #elif has been matched
+    None,
+    // The current #if or #elif is being matched
+    Current,
+    // A previous #if or #elif has been matched
+    Previous,
+    // The entire #if we are in is being skipped over
+    Ignored,
+}
+
+impl IfMatched {
+    fn initial_if(val: bool) -> Self {
+        if val {
+            IfMatched::Current
+        } else {
+            IfMatched::None
+        }
+    }
+
+    fn middle_elif(self, val: bool) -> Self {
+        if self == IfMatched::Ignored {
+            IfMatched::Ignored
+        } else if self.has_matched() {
+            IfMatched::Previous
+        } else if val {
+            IfMatched::Current
+        } else {
+            IfMatched:: None
+        }
+    }
+
+    fn last_else(self) -> Self {
+        if self == IfMatched::Ignored {
+            IfMatched::Ignored
+        } else if self.has_matched() {
+            IfMatched::Previous
+        } else {
+            IfMatched::Current
+        }
+    }
+
+    fn inert(self) -> Self {
+        match self {
+            IfMatched::Current => IfMatched::Previous,
+            a => a,
+        }
+    }
+
+    fn has_matched(self) -> bool {
+        matches!(self, IfMatched::Current | IfMatched::Previous)
+    }
+}
+
+/// The `bool` parameter states whether we have
+/// seen a true conditional and taken the code inside,
+/// so #if 1 would translte to `If(true)` and #if 0
+/// would translate to `If(false)`.
+///
+/// After processing the #if and upon encountering an #elif,
+/// the new state would then be `Elif(false)`.
+type IfState = (IfKind, IfMatched);
 
 pub struct Preprocessor {
     pub pending_tokens: Vec<Locatable<TokenKind>>,
@@ -111,7 +174,9 @@ pub struct Preprocessor {
     poisoned: HashSet<InternedStr>,
     counter: u32,
 
-    file_manager: FileManager,
+    nested_ifs: Vec<IfState>,
+
+    pub file_manager: FileManager,
     external_mode: bool,
 
     pub error_handler: RefCell<ErrorHandler<CppError>>,
@@ -119,22 +184,28 @@ pub struct Preprocessor {
 
 impl Preprocessor {
     pub fn new(file_manager: FileManager, external_mode: bool) -> Self {
-        Self {
+        let mut ret = Self {
             pending_tokens: Vec::new(),
 
             definitions: Definitions::new(),
             poisoned: HashSet::new(),
             counter: 0,
 
+            nested_ifs: Vec::new(),
+
             file_manager,
             external_mode,
 
             error_handler: RefCell::new(ErrorHandler::new()),
-        }
+        };
+
+        ret.preprocess_file(SourceKind::Generated, include_str!("../headers/predefined.h").into());
+
+        ret
     }
 
-    pub fn preprocess_file(&mut self, source: FileId, data: ArcStr) {
-        let lexer = &mut Lexer::new(SourceKind::File(source), data, false, self.external_mode);
+    pub fn preprocess_file(&mut self, source: SourceKind, data: ArcStr) {
+        let lexer = &mut Lexer::new(source, data, false, self.external_mode);
         let mut ifs = Vec::<IfState>::with_capacity(64);
 
         // This would be a simple boolean were it not for the complexities of trying to
@@ -171,6 +242,25 @@ impl Preprocessor {
 
             use TokenKind::*;
             use WhitespaceKind::*;
+
+            let skip_to_newline = |lexer: &mut Lexer| {
+                lexer.skip_line();
+            };
+
+            // We are skipping the tokens between an #if and and #elif, for example
+            let currently_skipping_tokens = match self.nested_ifs.last() {
+                Some((_, IfMatched::Current)) | None => false,
+                _ => true,
+            };
+
+            // We are currently skipping directives because we encountered an #if
+            // while we were skipping tokens.
+            let currently_skipping_directives = match self.nested_ifs.last() {
+                Some((_, IfMatched::Ignored)) => true,
+                _ => false,
+            };
+            debug_assert!(!currently_skipping_tokens || start_of_line != LineType::DisallowDirective);
+            
             match token.data {
                 Hash(_) => {
                     if start_of_line != LineType::DisallowDirective {
@@ -189,13 +279,98 @@ impl Preprocessor {
                             Ok(x) => x,
                             Err(e) => {
                                 self.error_handler.get_mut().push_error(e);
-                                self.skip_to_newline(lexer);
+                                skip_to_newline(lexer);
                                 continue;
                             }
                         };
 
                         use DirectiveKind::*;
                         let res = match directive.data {
+                            // Match directives dealing with #if's first
+                            If => (|| {
+                                let to_push = if currently_skipping_tokens {
+                                    (IfKind::If, IfMatched::Ignored)
+                                } else {
+                                    let value = self.if_boolean_expr(lexer)?;
+                                    (IfKind::If, IfMatched::initial_if(value))
+                                };
+                                
+                                self.nested_ifs.push(to_push);
+                                
+                                Ok(())
+                            })(),
+
+                            IfDef => (|| {
+                                let to_push = if currently_skipping_tokens {
+                                    (IfKind::If, IfMatched::Ignored)
+                                } else {
+                                    let id = self.expect_id(lexer, false)?;
+                                    let exists = self.definitions.contains_key(&id.data);
+                                    (IfKind::If, IfMatched::initial_if(exists))
+                                };
+
+                                
+                                self.nested_ifs.push(to_push);
+                                Ok(())
+                            })(),
+
+                            IfNDef => (|| {
+                                let to_push = if currently_skipping_tokens {
+                                    (IfKind::If, IfMatched::Ignored)
+                                } else {
+                                    let id = self.expect_id(lexer, false)?;
+                                    let exists = self.definitions.contains_key(&id.data);
+                                    (IfKind::If, IfMatched::initial_if(!exists))
+                                };
+
+                                self.nested_ifs.push(to_push);
+                                Ok(())
+                            })(),
+
+                            Elif => (|| {
+                                let value = if !currently_skipping_directives {
+                                    self.if_boolean_expr(lexer)?
+                                } else {
+                                    false
+                                };
+
+                                if let Some((a @ (IfKind::If | IfKind::Elif), v)) = self.nested_ifs.last_mut() {
+                                    *a = IfKind::Elif;
+                                    *v = v.middle_elif(value);
+                                    
+                                    Ok(())
+                                } else {
+                                    Err(directive
+                                        .location
+                                        .with(CppError::UnexpectedElse))
+                                }
+                            })(),
+
+                            Else => {
+                                if let Some((a @ (IfKind::If | IfKind::Elif), v)) = self.nested_ifs.last_mut() {
+                                    *a = IfKind::Else;
+                                    *v = v.last_else();
+
+                                    Ok(())
+                                } else {
+                                    Err(directive
+                                        .location
+                                        .with(CppError::UnexpectedElse))
+                                }
+                            }
+
+                            EndIf => {
+                                if self.nested_ifs.pop().is_none() {
+                                    Err(directive.location.with(CppError::UnexpectedEndIf))
+                                } else {
+                                    Ok(())
+                                }
+                            }
+
+                            // If we should ignore tokens,
+                            // ignore all other directives
+                            _ if currently_skipping_tokens => Ok(()),
+
                             Define => self.define(lexer),
                             Undef => (|| {
                                 let id = self.expect_id(lexer, false)?;
@@ -219,10 +394,10 @@ impl Preprocessor {
                                         } else {
                                             IncludeKind::Local
                                         },
-                                    );
+                                    ).unwrap();
                                     self.preprocess_file(
-                                        unsafe { std::mem::transmute(1) },
-                                        data.unwrap().0,
+                                        data.1,
+                                        data.0,
                                     );
 
                                     Ok(())
@@ -233,12 +408,25 @@ impl Preprocessor {
                                 }
                             }
 
+                            Warning => {
+                                // ignored
+                                Ok(())
+                            }
+
+                            Error => {
+                                for i in Self::iter_tokens_one_line(lexer) {
+                                    println!("{:?}", i);
+                                }
+
+                                todo!()
+                            }
+
                             t => todo!("directive {t:?}"),
                         };
 
                         if let Err(e) = res {
                             self.error_handler.get_mut().push_error(e);
-                            self.skip_to_newline(lexer);
+                            skip_to_newline(lexer);
                         }
                     } else {
                         self.pending_tokens.push(token);
@@ -262,6 +450,11 @@ impl Preprocessor {
                     }
                 }
                 c => {
+                    if currently_skipping_tokens {
+                        skip_to_newline(lexer);
+                        continue;
+                    }
+
                     start_of_line = LineType::DisallowDirective;
                     if let Identifier(ident) = c {
                         if self.poisoned.contains(&ident) {
@@ -272,6 +465,24 @@ impl Preprocessor {
                 }
             }
         }
+    }
+
+    fn iter_tokens_one_line<'a>(
+        lexer: &'a mut Lexer,
+    ) -> impl Iterator<Item = Result<Locatable<TokenKind>, Locatable<CppError>>> + 'a {
+        std::iter::from_fn(|| {
+            let token = lexer.next_non_whitespace();
+
+            if let Some(Ok(Locatable {
+                data: TokenKind::Whitespace(WhitespaceKind::Newline), ..
+            })) = token {
+                return None;
+            }
+
+            token.map(|token| {
+                token.map_err(|locatable| locatable.map(|e| e.into()))
+            })
+        })
     }
 
     fn expect_id(
@@ -328,10 +539,6 @@ impl Preprocessor {
                 location: lexer.span(lexer.offset()),
             }),
         }
-    }
-
-    fn skip_to_newline(&mut self, lexer: &mut Lexer) {
-        lexer.skip_line();
     }
 
     fn expect_no_tokens(&mut self, lexer: &mut Lexer) -> Result<(), Locatable<CppError>> {

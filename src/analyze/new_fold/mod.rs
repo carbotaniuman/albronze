@@ -107,6 +107,7 @@ impl Folder for PreprocessorFolder {
                 return Err(expr.location.with(FoldError::Invalid))
             }
             ExprType::Cast(inner) if expr.ctype == TypeKind::Bool => bool_cast(self, inner)?,
+            ExprType::Cast(inner) if expr.ctype.is_integral() => self.const_fold(inner)?.expr,
             d => unreachable!("{:?} should have been caught by preprocessor", d),
         };
 
@@ -333,6 +334,7 @@ fn bool_cast(folder: impl Folder, expr: &Expr) -> Result<ExprType, Locatable<Fol
         }
     )
 }
+
 
 // fn cast(expr: Expr, ctype: &TypeKind) -> CompileResult<ExprType> {
 //     let expr = expr.const_fold()?;

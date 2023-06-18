@@ -15,56 +15,24 @@ mod preprocess;
 mod scope;
 
 use crate::analyze::Analyzer;
-use crate::analyze::Folder;
 use crate::parse::Parser;
-use crate::preprocess::{pretty_print, Keyword, TokenKind};
+use crate::preprocess::{ Keyword, TokenKind };
+use crate::location::SourceKind;
 
 use intern::*;
 
-use arcstr::ArcStr;
-use std::path::PathBuf;
 use std::str::FromStr;
-
-#[derive(Debug, Clone)]
-pub struct Source {
-    pub code: ArcStr,
-    pub path: PathBuf,
-}
-
-impl AsRef<str> for Source {
-    fn as_ref(&self) -> &str {
-        self.code.as_ref()
-    }
-}
-
-pub type Files = codespan::Files<Source>;
 
 fn main() {
     let mut manager = preprocess::FileManager::new();
     let mut processor = preprocess::Preprocessor::new(manager, true);
 
     let value = arcstr::format!("{}", std::fs::read_to_string("test.c").unwrap());
-    let mut files = Files::new();
-    let id = files.add(
-        "laser",
-        Source {
-            code: value.clone(),
-            path: "".into(),
-        },
-    );
 
-    processor.preprocess_file(id, value);
-    println!(
-        "{}",
-        format!("{}", pretty_print(processor.pending_tokens.clone()))
-    );
-
-    for i in &processor.pending_tokens {
-        println!("{:?}", i);
-    }
+    processor.preprocess_file(SourceKind::Generated, value);
 
     let x = processor.pending_tokens.clone();
-    println!("{:?}", processor.error_handler);
+    eprintln!("Errors: {:?}", processor.error_handler);
 
     let mut parser = Parser::new(
         x.into_iter()
@@ -82,29 +50,21 @@ fn main() {
     );
 
     use crate::analyze::PureAnalyzer;
-    let expr = parser.expr().unwrap();
-    if !parser.is_empty() {
-        todo!()
+
+    let mut analyzer = Analyzer::new(parser, false);
+
+    let mut out = Vec::new();
+    loop {
+        match analyzer.next() {
+            Some(i) => out.push(i),
+            None => break,
+        }
     }
-    let expr = PureAnalyzer::new().expr(expr);
+    
+    
 
-    let folder = crate::analyze::PreprocessorFolder;
-    let expr = folder.const_fold(&expr);
-    println!("{:?}", expr);
-
-    // let mut analyzer = Analyzer::new(parser, false);
-
-    // let mut out = Vec::new();
-    // loop {
-    //     match analyzer.next() {
-    //         Some(i) => out.push(i),
-    //         None => break,
-    //     }
-    // }
-
-    // for i in out {
-    //     println!("{}", i.unwrap().data);
-    //     println!();
-    // }
-    // println!("{:?}", analyzer.warnings());
+    for i in out {
+        println!("{}", i.unwrap().data);
+    }
+    eprintln!("{:?}", analyzer.warnings());
 }

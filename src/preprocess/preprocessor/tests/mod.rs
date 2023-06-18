@@ -1,8 +1,5 @@
 use super::*;
 
-use crate::Source;
-use codespan::Files;
-
 // A little copy-pasting can't hurt right?
 macro_rules! define_test {
     ($name: ident) => {
@@ -10,19 +7,11 @@ macro_rules! define_test {
         fn $name() {
             let contents =
                 arcstr::literal!(include_str!(concat!("files/", stringify!($name), ".c")));
-            let mut files = Files::new();
-            let id = files.add(
-                concat!(stringify!($name), ".c"),
-                Source {
-                    code: contents.clone(),
-                    path: concat!("files/", stringify!($name), ".c").into(),
-                },
-            );
 
             {
                 let mut processor = Preprocessor::new(FileManager::new(), false);
 
-                processor.preprocess_file(id, contents.clone());
+                processor.preprocess_file(SourceKind::Generated, contents.clone());
                 let $name = processor.pending_tokens;
 
                 // Have a slightly nicer expression
@@ -36,19 +25,11 @@ macro_rules! define_test {
         fn $name() {
             let contents =
                 arcstr::literal!(include_str!(concat!("files/", stringify!($name), ".c")));
-            let mut files = Files::new();
-            let id = files.add(
-                concat!(stringify!($name), ".c"),
-                Source {
-                    code: contents.clone(),
-                    path: concat!("files/", stringify!($name), ".c").into(),
-                },
-            );
 
             {
                 let mut processor = Preprocessor::new(FileManager::new(), true);
 
-                processor.preprocess_file(id, contents.clone());
+                processor.preprocess_file(SourceKind::Generated, contents.clone());
                 let $name = processor.pending_tokens;
 
                 // Have a slightly nicer expression
@@ -81,6 +62,7 @@ define_test! {recursive_self_ref}
 define_test! {recursive}
 define_test! {scmd}
 define_test! {sequence_iteration}
+define_test! {standard}
 define_test! {stringify_strings}
 define_test! {stringify}
 define_test! {with_comments vararg_stringify}

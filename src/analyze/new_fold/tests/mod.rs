@@ -3,24 +3,17 @@ use crate::analyze::PureAnalyzer;
 use crate::location::Locatable;
 use crate::parse::Parser;
 use crate::preprocess::{FileManager, Keyword, Preprocessor, TokenKind};
-use crate::{get_str, Files, Source};
+use crate::{get_str};
+use crate::SourceKind;
+
 use arcstr::ArcStr;
 use std::str::FromStr;
 
 fn process(folder: impl Folder, contents: ArcStr) -> Result<crate::hir::ExprType, Locatable<FoldError>> {
-    let mut files = Files::new();
-    let id = files.add(
-        "<generated>",
-        Source {
-            code: contents.clone(),
-            path: concat!("<generated>").into(),
-        },
-    );
-
     let preprocessed = {
         let mut processor = Preprocessor::new(FileManager::new(), false);
 
-        processor.preprocess_file(id, contents.clone());
+        processor.preprocess_file(SourceKind::Generated, contents.clone());
         processor.pending_tokens
     };
 
@@ -71,7 +64,6 @@ define_test!(multiplication, PreprocessorFolder, "5 * 5");
 define_test!(division, PreprocessorFolder, "5 / 5");
 define_test!(bitwise_not, PreprocessorFolder, "~5");
 
-// Our AST construction is just busted, we'll fix this later
 define_test!(logical_not_1, PreprocessorFolder, "!5");
 define_test!(logical_not_2, PreprocessorFolder, "!0");
 define_test!(ternary_1, PreprocessorFolder, "1 ? 2 : 3");

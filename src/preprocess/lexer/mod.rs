@@ -203,7 +203,7 @@ impl Lexer {
 
     /// Return the character that would be returned by `next_char`.
     /// Can be called any number of times and will still return the same result.
-    pub fn peek(&mut self) -> Option<char> {
+    fn peek(&mut self) -> Option<char> {
         self.current = self
             .current
             .or_else(|| self.lookahead.take())
@@ -214,7 +214,7 @@ impl Lexer {
 
     /// Return the character that would be returned if you called `next_char()` twice in a row.
     /// Can be called any number of the times and will still return the same result.
-    pub fn peek_next(&mut self) -> Option<char> {
+    fn peek_next(&mut self) -> Option<char> {
         self.peek();
         self.lookahead = self.lookahead.or_else(|| self.advance_char_lookaheads());
         self.lookahead.map(|x| x.0)

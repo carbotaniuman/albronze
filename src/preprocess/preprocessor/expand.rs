@@ -3,13 +3,13 @@ use super::*;
 use std::iter::once;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-enum CppToken {
+pub(super) enum CppToken {
     Token(Locatable<TokenKind>, /* painted */ bool),
     EndMacro(InternedStr),
 }
 
 impl CppToken {
-    fn token(self) -> Option<Locatable<TokenKind>> {
+    pub fn token(self) -> Option<Locatable<TokenKind>> {
         match self {
             Self::Token(t, _) => Some(t),
             Self::EndMacro(_) => None,
@@ -38,7 +38,7 @@ impl Preprocessor {
     // Another reference used is Dave Prosser's
     // algorithm, documented here:
     // https://www.spinellis.gr/blog/20060626/
-    fn do_expand_macro(
+    pub(super) fn do_expand_macro(
         &self,
         lexer: &mut Lexer,
         expansion_buffer: &mut Vec<CppToken>,
